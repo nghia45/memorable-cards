@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { bucket, box, tileRoof } from './arch.js';
 import { plaster, terracotta, bakeGlow, withGlow, repeatMaps, fbm } from './tex.js';
 import { canvasTex } from './print.js';
-import { rng, buildBucket, tint } from './street.js';
+import { rng, buildBucket, tint, slices } from './street.js';
 import { lanternField, pickColor } from './lanterns.js';
 import { makeKid, makePerson } from './figures.js';
 
@@ -157,7 +157,7 @@ export function createHangMa(mats) {
     P.plaster.push(box(w - 0.5, 0.12, 2.5, 0, g - 0.78, -1.25)); // ceiling of the shop
     P.dark.push(box(w - 0.55, 0.22, 0.24, 0, g - 0.86, 0.02)); // rolled shutter drum
     for (const s of [-1, 1]) { // interior side walls, stocked too
-      const sw = new THREE.PlaneGeometry(2.4, g - 0.75).rotateY(-s * Math.PI / 2).translate(s * (w / 2 - 0.3), (g - 0.75) / 2, -1.2);
+      const sw = new THREE.PlaneGeometry(2.4, g - 0.75).rotateY(-s * Math.PI / 2).translate(s * (w / 2 - 0.32), (g - 0.75) / 2, -1.2); // 2 cm inside the piers' inner faces, not on them
       P.shop.push(uvRect(sw, shop / 4 + (s > 0 ? 0.15 : 0), 0, shop / 4 + (s > 0 ? 0.25 : 0.1), 1));
     }
     P.plaster.push(box(w, 0.12, 0.6, 0, 0.06, -0.2));
@@ -303,7 +303,7 @@ export function createHangMa(mats) {
   const bikeMat = withGlow(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.2 }));
   const merged = (list, material) => { if (!list.length) return; const geo = mergeAll(list); if (material.onBeforeCompile && material.customProgramCacheKey?.() === 'glow') bakeGlow(geo, b.lights); const me = new THREE.Mesh(geo, material); me.receiveShadow = true; group.add(me); return me; };
   merged(b.shop, shopMat); merged(b.sign, signMat); merged(b.cloth, clothMat);
-  const bikes = merged(b.bike, bikeMat); if (bikes) bikes.castShadow = true;
+  for (const list of slices(b.bike)) merged(list, bikeMat).castShadow = true;
 
   const fields = ['star', 'carp', 'ball'].map((k) => lanternField(k, items[k], { halo: k === 'star' ? 0.7 : 0.6, haloOpacity: 0.22 }));
   group.add(...fields);
@@ -317,10 +317,10 @@ export function createHangMa(mats) {
   const tc = repeatMaps(terracotta(4), [(FACADE - ROAD) / 1.2, len / 1.2]);
   const pavMat = withGlow(new THREE.MeshStandardMaterial({ ...tc, color: 0xc8b8a8, roughness: 0.85 }));
   for (const s of [-1, 1]) {
-    const pw = FACADE - ROAD + 0.2, pg = new THREE.PlaneGeometry(pw, len, 6, 120).rotateX(-Math.PI / 2).translate(s * (ROAD + pw / 2 - 0.1), 0.15, midZ);
+    const pw = FACADE - ROAD + 0.1, pg = new THREE.PlaneGeometry(pw, len, 6, 120).rotateX(-Math.PI / 2).translate(s * (ROAD + pw / 2), 0.15, midZ);
     bakeGlow(pg, b.lights);
     group.add(Object.assign(new THREE.Mesh(pg, pavMat), { receiveShadow: true }));
-    const kerb = box(0.18, 0.16, len, s * (ROAD + 0.08), 0.07, midZ, 1);
+    const kerb = box(0.18, 0.17, len, s * (ROAD + 0.08), 0.075, midZ, 1); // top 1 cm above the pavement, which starts under it: no shared plane to z-fight
     bakeGlow(kerb, b.lights);
     group.add(Object.assign(new THREE.Mesh(kerb, withGlow(new THREE.MeshStandardMaterial({ color: 0x8a8580, roughness: 0.8 }))), { receiveShadow: true }));
   }

@@ -24,15 +24,29 @@ export function streetMaterials() {
 export function buildBucket(b, mats, group, extraLights = []) {
   const lights = b.lights.concat(extraLights);
   for (const k of ['plaster', 'wood', 'tiles', 'shutter', 'lit', 'dark']) {
-    if (!b[k].length) continue;
-    const geo = mergeGeometries(b[k]);
-    if (k !== 'lit') bakeGlow(geo, lights);
-    const mesh = new THREE.Mesh(geo, mats[k]);
-    mesh.receiveShadow = k !== 'lit';
-    mesh.castShadow = k === 'plaster' || k === 'tiles';
-    group.add(mesh);
-    if (k === 'tiles') group.add(Object.assign(new THREE.Mesh(geo, mats.soffit), { receiveShadow: true }));
+    for (const list of slices(b[k])) {
+      const geo = mergeGeometries(list);
+      if (k !== 'lit') bakeGlow(geo, lights);
+      const mesh = new THREE.Mesh(geo, mats[k]);
+      mesh.receiveShadow = k !== 'lit';
+      mesh.castShadow = k === 'plaster' || k === 'tiles';
+      group.add(mesh);
+      if (k === 'tiles') group.add(Object.assign(new THREE.Mesh(geo, mats.soffit), { receiveShadow: true }));
+    }
   }
+}
+
+// Split geometries into 12 m slices along z: one merged mesh per slice lets the camera and the
+// moon's shadow map skip the far end of the street instead of drawing all of it every frame.
+export function slices(geos, size = 12) {
+  const out = new Map(), c = new THREE.Vector3();
+  for (const g of geos) {
+    if (!g.boundingBox) g.computeBoundingBox();
+    const k = Math.floor(g.boundingBox.getCenter(c).z / size);
+    if (!out.has(k)) out.set(k, []);
+    out.get(k).push(g);
+  }
+  return out.values();
 }
 
 export function tint(geos, c) {

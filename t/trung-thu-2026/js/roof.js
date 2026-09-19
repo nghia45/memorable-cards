@@ -23,16 +23,6 @@ function matTex() { // chiếu cói: woven sedge with red and green bands
     for (let i = 0; i < 6; i++) { const cx = 90 + i * 66; x.beginPath(); x.moveTo(cx, 230); x.lineTo(cx + 22, 256); x.lineTo(cx, 282); x.lineTo(cx - 22, 256); x.closePath(); x.stroke(); }
   });
 }
-function windowsTex() { // far city blocks: a grid of windows, some lit
-  return canvasTex(256, 256, (x, w, h) => {
-    x.fillStyle = '#1a1c2a'; x.fillRect(0, 0, w, h);
-    for (let j = 0; j < 16; j++) for (let i = 0; i < 8; i++) {
-      const on = Math.random() < 0.35;
-      x.fillStyle = on ? ['#ffcf88', '#ffe6b0', '#f2a860', '#cfe0ff'][Math.floor(Math.random() * 4)] : '#11131c';
-      x.fillRect(i * 32 + 8, j * 16 + 4, 16, 8);
-    }
-  });
-}
 
 // ---------- tray items ----------
 function plate(r = 0.13) {
@@ -197,18 +187,48 @@ export function createRooftop(mats) {
     tint(parts.plaster, tintC);
     for (const k in parts) for (const g of parts[k]) b[k].push(g.applyMatrix4(m));
   }
-  // far city: tall blocks with window grids, and a few dark tree crowns in between
-  const wt = windowsTex(); wt.wrapS = wt.wrapT = THREE.RepeatWrapping;
-  const cityMat = new THREE.MeshBasicMaterial({ map: wt, color: new THREE.Color(0.85, 0.8, 0.75), fog: true });
-  const cityGeos = [];
-  for (let i = 0; i < 40; i++) {
-    const a = rand() * Math.PI * 2, rr = 40 + rand() * 60, w = 8 + rand() * 14, h = 6 + rand() * (rand() < 0.2 ? 40 : 16);
-    const g = new THREE.BoxGeometry(w, h, w * 0.8).translate(0, h / 2 - 12, 0);
-    const uv = g.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) * w / 8, uv.getY(k) * h / 16);
-    g.rotateY(rand() * 3).translate(Math.cos(a) * rr, 0, Math.sin(a) * rr);
-    cityGeos.push(g);
+  // far city: the old quarter, not towers. Rows of narrow tube houses (3-5 m wide, 3-6 floors) shoulder to
+  // shoulder at uneven heights, some with tiled roofs, most with flat terraces, tanks and antennas; a few
+  // scattered lit windows per floor. Street level is ~14 m below our terrace; the moon side stays low.
+  const FLOOR = 3.2, STREET = -14;
+  for (let r = 0; r < 34; r++) {
+    const a = rand() * Math.PI * 2, rr = 26 + rand() * 48;
+    const cx = Math.cos(a) * rr, cz = Math.sin(a) * rr;
+    const moonSide = cz < -10 && cx > -30 && cx < 18;
+    const row = new THREE.Matrix4().makeRotationY(Math.round(rand() * 4) * (Math.PI / 2) + (rand() - 0.5) * 0.25).setPosition(cx, 0, cz);
+    const n = 4 + Math.floor(rand() * 6);
+    let x = -n * 2;
+    for (let i = 0; i < n; i++) {
+      const w = 3 + rand() * 1.8, d = 12 + rand() * 8;
+      const floors = moonSide ? 3 + Math.floor(rand() * 2) : rand() < 0.05 ? 6 + Math.floor(rand() * 2) : 3 + Math.floor(rand() * 3);
+      const top = STREET + floors * FLOOR, cxh = x + w / 2;
+      const parts = { plaster: [box(w, top - STREET, d, cxh, (top + STREET) / 2, 0, 4)], lit: [], dark: [], tiles: [] };
+      if (rand() < 0.3) {
+        const t = tileRoof({ w, d: Math.min(d, 8), h: 1.4, over: 0.2, lift: 0.1, segU: 4, segV: 2 });
+        const m = new THREE.Matrix4().makeTranslation(cxh, top - t.wallY, d / 2 - Math.min(d, 8) / 2);
+        parts.tiles.push(t.roof.applyMatrix4(m), ...t.ridge.map((g) => g.applyMatrix4(m)));
+        parts.plaster.push(...t.gable.map((g) => g.applyMatrix4(m)));
+      } else {
+        parts.plaster.push(box(w, 0.9, 0.15, cxh, top + 0.45, d / 2, 4));
+        if (rand() < 0.5) parts.plaster.push(box(1.2, 0.9, 0.9, cxh + (rand() - 0.5) * w * 0.4, top + 0.45, (rand() - 0.5) * d * 0.5, 4)); // water tank
+        if (rand() < 0.35) parts.dark.push(box(0.06, 2.2, 0.06, cxh + (rand() - 0.5) * w * 0.6, top + 1.1, -d / 4, 4), box(1.1, 0.05, 0.05, cxh, top + 1.9, -d / 4, 4)); // TV antenna
+      }
+      // windows front and back: one or two per floor, most dark, a few lit warm
+      for (const side of [1, -1]) for (let f = 1; f < floors; f++) {
+        const cols = w > 4 ? 2 : 1;
+        for (let c = 0; c < cols; c++) {
+          const on = rand() < 0.3;
+          if (!on && rand() < 0.4) continue;
+          const pl = new THREE.PlaneGeometry(0.9, 1.3).rotateY(side < 0 ? Math.PI : 0)
+            .translate(cxh + (cols === 2 ? (c - 0.5) * 1.6 : 0), STREET + f * FLOOR + 1.4, side * (d / 2 + 0.02));
+          parts[on ? 'lit' : 'dark'].push(pl);
+        }
+      }
+      tint(parts.plaster, PALETTE[Math.floor(rand() * PALETTE.length)].clone().multiplyScalar(0.8));
+      for (const k in parts) for (const g of parts[k]) b[k].push(g.applyMatrix4(row));
+      x += w + 0.05;
+    }
   }
-  group.add(new THREE.Mesh(mergeGeometries(cityGeos), cityMat));
   const treeMat = std(0x1e3a22, { flatShading: true, roughness: 0.9 });
   for (let i = 0; i < 6; i++) { const a = rand() * Math.PI * 2, rr = 11 + rand() * 10; const t = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5 + rand() * 1.5, 1), treeMat); t.position.set(Math.cos(a) * rr, -1 + rand() * 2, Math.sin(a) * rr); t.scale.y = 0.8; group.add(t); }
 
@@ -303,4 +323,3 @@ export function createRooftop(mats) {
     },
   };
 }
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';

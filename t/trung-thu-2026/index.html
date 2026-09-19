@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trung Thu Tuổi Thơ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8F%AE%3C/text%3E%3C/svg%3E">
 <meta name="description" content="An interactive 3D Mid-Autumn story: walk Hàng Mã street and make the festival toys, set the moon-watching tray on a Hanoi rooftop, join the lantern parade and the lion dance, then walk on the moon with Cuội.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,21 +53,25 @@
   #start .primary { background: var(--gold); color: #1a1030; }
   #start .map, #start.map .home { display: none; }
   #start.map .map { display: flex; }
-  .chain { list-style: none; margin: 8px 0; padding: 0; display: flex; gap: 40px; position: relative; }
-  .chain::before { content: ''; position: absolute; left: 12%; right: 12%; top: 50%; border-top: 3px solid var(--gold); box-shadow: 0 0 10px var(--gold); }
+  /* the chapters hang from one cord like paper lanterns on Hàng Mã: warm dó paper, ink, a thread each */
+  .chain { list-style: none; margin: 8px 0; padding: 30px 0 0; display: flex; gap: 26px; position: relative; }
+  .chain::before { content: ''; position: absolute; left: -24px; right: -24px; top: 6px; border-top: 1.5px solid rgba(243, 210, 126, .5); }
   .chain li { position: relative; }
-  .chain button { width: 168px; height: 100%; padding: 16px 14px 14px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px;
-    background: rgba(20, 16, 52, .88); color: var(--ink); font-weight: 400; letter-spacing: 0; text-align: center; }
-  .chain button:hover { background: rgba(48, 34, 100, .95); transform: translateY(-3px); }
-  .chain .n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #1a1030; font-weight: 600; }
-  .chain .ic { font-size: 30px; line-height: 1.2; }
+  .chain li::before { content: ''; position: absolute; left: 50%; top: -24px; height: 24px; border-left: 1px solid rgba(243, 210, 126, .5); }
+  .chain button { width: 176px; height: 100%; padding: 16px 16px 18px; border-radius: 3px; display: block; text-align: left; letter-spacing: 0;
+    background: #f0e5cb; color: #2b2016; box-shadow: 0 12px 28px rgba(0, 0, 0, .4); transform-origin: 50% -24px; transition: transform .25s ease; }
+  .chain li:nth-child(odd) button { transform: rotate(-1.2deg); }
+  .chain li:nth-child(even) button { transform: rotate(.9deg); }
+  .chain button:hover, .chain button:focus-visible { background: #f6ecd5; transform: none; }
+  .chain .n { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #9a3b22; }
   .chain b, .chain small { display: block; }
-  .chain b { margin-bottom: 4px; font: italic 500 18px 'Playfair Display', serif; color: var(--gold); }
-  .chain small { font-size: 12px; line-height: 1.45; opacity: .8; }
+  .chain b { margin-bottom: 6px; font: italic 600 20px/1.2 'Playfair Display', serif; color: #6e1f12; }
+  .chain small { font-size: 12.5px; line-height: 1.5; color: #4a3b2c; }
   @media (max-width: 760px) {
-    .chain { flex-direction: column; gap: 14px; }
-    .chain::before { left: 50%; right: auto; top: 6%; bottom: 6%; border-top: 0; border-left: 3px solid var(--gold); }
-    .chain button { width: min(320px, calc(100vw - 32px)); flex-direction: row; text-align: left; gap: 12px; padding: 12px 14px; }
+    .chain { flex-direction: column; gap: 14px; padding: 0 0 0 22px; }
+    .chain::before { left: 4px; right: auto; top: -8px; bottom: -8px; border-top: 0; border-left: 1.5px solid rgba(243, 210, 126, .5); }
+    .chain li::before { left: -18px; top: 50%; width: 18px; height: 0; border-left: 0; border-top: 1px solid rgba(243, 210, 126, .5); }
+    .chain li button, .chain li:nth-child(n) button { width: min(320px, calc(100vw - 64px)); transform: none; }
   }
   #mute svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   #mute .off, #mute[aria-pressed="true"] .on { display: none; }
@@ -92,10 +97,14 @@
   #fact.on, #memory.on { opacity: 1; translate: -50% 0; pointer-events: auto; }
   #fact { padding: 18px 20px 16px; border-radius: 14px; box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
     background: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, .5), transparent 40%), repeating-linear-gradient(115deg, rgba(160, 130, 90, .05) 0 2px, transparent 2px 6px), #f3e7cc;
-    border: 1px solid #c9a86a; max-height: 58vh; overflow: auto; }
+    border: 1px solid #c9a86a; }
+  /* the card always shows in full: on short screens the text gets smaller instead of scrolling */
+  @media (max-height: 640px) { #fact { padding: 12px 16px 10px; } #fact h3 { font-size: 20px; margin: 2px 0 4px; } #fact p { font-size: 13px; line-height: 1.45; } #fact p.en { font-size: 12px; } #fact button { margin-top: 4px; } }
+  @media (max-height: 460px) { #fact { width: min(760px, calc(100% - 32px)); } #fact p { font-size: 12px; line-height: 1.4; } #fact p.en { font-size: 11px; } }
   #fact .tag { margin: 0; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #9a2a1a; font-weight: 600; }
   #fact h3 { margin: 4px 0 8px; font: 600 clamp(20px, 4vw, 26px) 'Playfair Display', serif; color: #7a1a10; }
   #fact p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.55; }
+  #fact p.origin { display: inline-block; margin: -2px 0 10px; padding: 2px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: rgba(154, 42, 26, .1); color: #7a1a10; }
   #fact p.en { font-style: italic; font-size: 13px; opacity: .7; }
   #fact button, #memory button { display: block; margin: 10px 0 0 auto; color: #fff4d0; background: #9a1a14; border-color: #9a1a14; }
   #fact button:hover, #memory button:hover { background: #b8261c; }
@@ -168,7 +177,11 @@
     Promise.all(mods.map((m) => import(m === 'three' ? m : './js/' + m + '.js').then(() => null, (e) => m + ': ' + (e && e.name) + ' ' + (e && e.message))))
       .then((r) => { const bad = r.filter(Boolean); step.textContent += ' · ' + (bad.length ? bad.join(' | ') : 'all modules import fine') + ' · ' + navigator.userAgent.replace(/^.*?\(|\).*$/g, ''); });
   };
-  addEventListener('error', (e) => { if (window.__loaded) return; fail(e.message || (e.target && (e.target.src || e.target.href)) || 'resource failed'); diag(); }, true);
+  addEventListener('error', (e) => {
+    const t = e.target, tag = t && t.tagName;
+    // only scripts and module preloads stop the card; a missing photo or sound is not fatal
+    if (window.__loaded || (tag && tag !== 'SCRIPT' && !(tag === 'LINK' && t.rel === 'modulepreload'))) return;
+    fail(e.message || (e.target && (e.target.src || e.target.href)) || 'resource failed'); diag(); }, true);
   addEventListener('unhandledrejection', (e) => fail(String(e.reason && (e.reason.stack || e.reason.message) || e.reason)));
   setTimeout(() => { if (p < 0.45) fail('still waiting for the scripts after 30 s (' + navigator.userAgent + ')'); }, 30000);
 })();

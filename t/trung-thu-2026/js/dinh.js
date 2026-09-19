@@ -17,6 +17,7 @@ const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, rough
 export const EYE = 1.3;
 export const LION_AT = new THREE.Vector3(0.6, 0, 0.5);
 export const TELLER_AT = new THREE.Vector3(-7.4, 0, 1.6);
+export const TQ_AT = new THREE.Vector3(6.6, 0, 3.8); // the trống quân: barrel, rope, a young man and a young woman
 
 function flagTex(i) { // cờ ngũ sắc: a festival flag with a saw-toothed border in the five colours
   const cols = ['#d8202a', '#f2c230', '#2a8a3a', '#2a5ad8', '#f6f2ea'];
@@ -208,6 +209,47 @@ export function createDinh(mats) {
   }
   const carpKid = paraders[3];
 
+  // ---------- hát trống quân: an upside-down barrel, a rope staked out over a small post on it, struck with
+  // bamboo sticks near the post; a young man and a young woman sing verses back and forth ----------
+  const tq = new THREE.Group(); tq.position.copy(TQ_AT); group.add(tq);
+  const BH = 0.48, POST = 0.13, HALF = 2.3;
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, BH, 18), std(0x8a5a2a, { roughness: 0.8 }));
+  barrel.position.y = BH / 2;
+  for (const y of [0.08, BH - 0.08]) { const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.215 + (0.23 - 0.2) * (0.5 - y / BH), 0.012, 6, 24).rotateX(Math.PI / 2), std(0x2a2a2a, { metalness: 0.5 })); hoop.position.y = y; tq.add(hoop); }
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, POST, 0.04), std(0x6a4a2a)); post.position.y = BH + POST / 2;
+  tq.add(barrel, post);
+  for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 0.3, 6), std(0x7a5a3a)); st.position.set(sx * HALF, 0.1, 0); tq.add(st); }
+  const TOP = new THREE.Vector3(0, BH + POST, 0), ENDS = [new THREE.Vector3(-HALF, 0.22, 0), new THREE.Vector3(HALF, 0.22, 0)];
+  const ropeMat = std(0xc8b48a, { roughness: 0.9 });
+  const rope = new THREE.Mesh(new THREE.BufferGeometry(), ropeMat); rope.castShadow = true; tq.add(rope);
+  let ropeAmp = 0, ropeT = 0;
+  const ropeAt = (amp, t) => { // the rope from stake to post to stake, both halves quivering when struck
+    const pts = [];
+    for (const [a, b] of [[ENDS[0], TOP], [TOP, ENDS[1]]]) for (let i = 0; i <= 12; i++) {
+      const u = i / 12, p = a.clone().lerp(b, u);
+      p.y += amp * Math.sin(Math.PI * u) * Math.sin(t * 60);
+      if (!(pts.length && i === 0)) pts.push(p);
+    }
+    rope.geometry.dispose();
+    rope.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.1), 48, 0.009, 5);
+  };
+  ropeAt(0, 0);
+  const tqHit = new THREE.Mesh(new THREE.BoxGeometry(HALF * 2, 1.0, 0.8), new THREE.MeshBasicMaterial({ visible: false }));
+  tqHit.position.set(TQ_AT.x, 0.5, TQ_AT.z); group.add(tqHit);
+  // the singers: áo nâu, the girl in a head scarf and nón; each holds a short bamboo stick
+  const singers = [
+    makePerson({ top: 0x4a3526, bottom: 0x2a2420, outfit: 'aobaba', hair: 'short' }),
+    makePerson({ girl: true, top: 0x7a4a2a, bottom: 0x1e1a18, outfit: 'aobaba', hair: 'khan', hat: 'non' }),
+  ];
+  singers.forEach((p, i) => {
+    const sx = i ? 1 : -1;
+    p.g.position.set(sx * 0.62, 0, 0.42); p.g.rotation.y = -sx * 1.1;
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.32, 5), std(0xc8a860)); stick.rotation.x = Math.PI / 2 - 0.3;
+    stick.position.copy(p.arms[1].hand); p.arms[1].el.add(stick);
+    p.pose('R', -0.6, 0.1, -0.6);
+    tq.add(p.g);
+  });
+
   // ---------- the bridge of moonlight (hidden until the staff is thrown) ----------
   const bridge = new THREE.Group();
   const shimmer = canvasTex(64, 512, (x, w, h) => {
@@ -220,7 +262,9 @@ export function createDinh(mats) {
   group.add(bridge);
 
   return {
-    group, lion, drumHit, loc, env, lettuce, teller, staff, tellerHit, banyan, ring, path, paraders, carpKid, bridge, bridgeMat, listeners,
+    group, lion, drumHit, loc, env, lettuce, teller, staff, tellerHit, banyan, ring, path, paraders, carpKid, bridge, bridgeMat, listeners, tq, tqHit, singers,
+    // one stroke on the trống quân by singer i (0 the young man, 1 the young woman): arm swings down, rope quivers
+    strike(i) { ropeAmp = 0.035; ropeT = 0; singers[i].swing = 1; },
     // build the bridge along a world-space curve (called once the moon direction is known)
     buildBridge(curve) {
       const N = 300, pos = [], uv = [], idx = [];
@@ -256,6 +300,8 @@ export function createDinh(mats) {
       for (const l of listeners) l.tick(t, 0);
       bridgeMat.map.offset.y = -t * 0.4;
       loc.rotation.z = Math.sin(t * 0.8) * 0.01;
+      if (ropeAmp > 0.0005) { ropeT += dt; ropeAmp *= Math.exp(-dt * 6); ropeAt(ropeAmp, ropeT); } else if (ropeAmp) { ropeAmp = 0; ropeAt(0, 0); }
+      for (const p of singers) { p.swing = Math.max(0, (p.swing || 0) - dt * 5); p.pose('R', -0.6 + Math.sin(p.swing * Math.PI) * 0.5, 0.1, -0.6 - Math.sin(p.swing * Math.PI) * 0.3); }
       // the lion's drum sits in the lion group: keep its hit sphere on it
       lion.drum.getWorldPosition(drumHit.position); group.worldToLocal(drumHit.position); drumHit.position.y = 0.75;
     },

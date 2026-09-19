@@ -107,7 +107,8 @@ stop for a few seconds, the walk carries on by itself.
    - press a mooncake in its wooden mould;
    - light the tin pop-pop boat and watch it chug.
 2. **The rooftop (sân thượng).** The family sits on a chiếu mat:
-   - make the pomelo dog;
+   - make the pomelo dog the real way: sour-pomelo segments pulled open into fluff, pinned with toothpicks
+     onto a winter-melon and potato frame, longan-seed eyes;
    - set the mâm cỗ: ông tiến sĩ giấy, the fruit, cakes, the pig and fish cakes, tea;
    - tap the rising moon to read its colour for the harvest;
    - grandpa lights the đèn kéo quân, and the card's photos ride on its rotor, one memory per turn;
@@ -115,6 +116,8 @@ stop for a few seconds, the walk carries on by itself.
 3. **The parade to the sân đình.** The kids march with their lanterns to the village yard:
    - a carp lantern;
    - a lion dance you drive with drum taps, ending in "lân ăn lộc";
+   - hát trống quân: strike the rope over the upside-down barrel, and a young man and woman trade a
+     courting ca dao, line by line;
    - a storyteller tells how Đường Minh Hoàng visited the moon and throws his staff, which becomes a
      bridge of moonlight.
 4. **The moon.** A small world you walk around:
@@ -142,7 +145,7 @@ Drop two tracks into `t/trung-thu-2026/audio/`:
 - `alley.mp3`: festive and drum-led, for the street and the parade;
 - `moon.mp3`: quiet, for the rooftop and the moon.
 
-Until then a generated placeholder plays. Effects are synthesized, among them the lion drum, knocks, the
+Until then a generated placeholder plays. Effects are synthesized, among them the lion drum, the trống quân rope, knocks, the
 boat's putt-putt, the flame, chimes and crickets.
 
 ## Files
@@ -154,9 +157,9 @@ boat's putt-putt, the flame, chimes and crickets.
 | `js/hangma.js` | Act 1 street: tube houses, shop interiors, strung lanterns, scooters, passers-by |
 | `js/stops.js` | The five hands-on stalls (star lantern, tò he, masks, mooncake mould, tin boat) |
 | `js/roof.js` | Act 2 rooftop: terrace, neighbours, bulbs, mat and table, family, tray slots |
-| `js/pomelo.js` | The pomelo, peel petals, segments that assemble into the dog, cloves, knife |
+| `js/pomelo.js` | The pomelo, peel petals, fluffed segments pinned onto the melon/potato frame, eyes, nose |
 | `js/keoquan.js` | The memory lantern: photo panels on the rotor, silhouettes with real candle shadows |
-| `js/dinh.js` | Act 3 village yard and đình, storyteller, parade, lộc pole, moonlight bridge |
+| `js/dinh.js` | Act 3 village yard and đình, trống quân, storyteller, parade, lộc pole, moonlight bridge |
 | `js/lion.js` | Lion (blinking eyes, clacking jaw, cloth body along a spine), Ông Địa, drum |
 | `js/moonworld.js` | Act 4: the walkable moon, painted boards, palace, Hằng Nga, rabbit, dancers, Cuội, Earth |
 | `js/figures.js` | Jointed people and kids (walk, sit, pose), hair, clothes and hats |
@@ -181,3 +184,10 @@ The cultural notes were checked against these pages:
 - Wiki HNUE, *Đèn kéo quân*
 - xinchaovietnam.vn and bachhoaxanh.com on mặt nạ giấy bồi
 - eggyolk.vn on why children parade with lanterns
+- VnExpress and Dân Việt on how chó bưởi are made (sour pomelo, toothpicks, melon frame, longan-seed eyes)
+- dsvh.gov.vn, *Hát Trống quân*; VietNamNet on its Trung Thu custom and Phan Kế Bính's account; Công Luận on
+  the instrument
+- Hoavouu and Chánh Kiến on the Nghê Thường / Đường Minh Hoàng legend (Chinese, marked as such on the cards)
+
+Legend cards carry an origin line: *Truyện cổ Việt Nam* (Cuội) or *Truyền thuyết Trung Hoa* (Hằng Nga and
+the jade rabbit, Đường Minh Hoàng, Nghê Thường).

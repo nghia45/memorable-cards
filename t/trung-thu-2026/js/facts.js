@@ -39,8 +39,8 @@ export const FACTS = {
   },
   dog: {
     tag: 'Khéo tay', title: 'Con chó bưởi',
-    vi: 'Múi bưởi bóc ra, xếp thành thân, chân, đầu; tai và đuôi cắt từ vỏ, mắt là hạt đinh hương hay hạt đậu đen. Con chó bưởi là món đồ chơi ăn được mà trẻ con mong nhất trên mâm cỗ.',
-    en: 'Pomelo segments built into a dog, with clove or black-bean eyes: the toy you get to eat.',
+    vi: 'Người ta chọn bưởi chua vì tép dai, ráo nước. Múi bưởi bóc sạch màng rồi tẽ ra cho tép xòe như bộ lông xù, dùng tăm ghim lên một cái khung: miếng bí xanh làm thân, củ khoai tây hay quả táo làm đầu. Hai múi làm tai, mắt là hạt nhãn (hoặc nho khô, táo tàu), mũi là miếng bí cắt tam giác. Con chó bưởi là món đồ chơi ăn được mà trẻ con mong nhất trên mâm cỗ.',
+    en: 'Sour-pomelo segments are pulled open so the juice sacs fluff out like fur, then pinned with toothpicks onto a melon-and-potato frame; longan seeds for eyes. The toy you get to eat.',
   },
   moon: {
     tag: 'Nông lịch', title: 'Trông trăng đoán mùa',
@@ -58,7 +58,13 @@ export const FACTS = {
     en: 'Trung Thu is the children’s festival; in 1951 Hồ Chí Minh opened his Mid-Autumn letter to children with these lines.',
   },
   // ---------- the parade and the village yard ----------
+  trongquan: {
+    tag: 'Dân ca', title: 'Hát trống quân',
+    vi: 'Đêm Trung thu xưa, làng quê Bắc Bộ hay hát trống quân: trai một bên, gái một bên, hát đối đáp bằng những câu ca dao lục bát, có mời trầu, có đố hoa đố quả, như câu mận hỏi đào vừa rồi. “Trống” là một cái thùng gỗ úp xuống, một sợi dây căng qua cái cọc nhỏ trên thùng, hai đầu buộc vào cọc cắm đất; người hát gõ que tre lên dây và thùng vang “thình thùng thình”. Sách Việt Nam phong tục của Phan Kế Bính kể lối hát này có từ thời vua Quang Trung, bày ra cho quân sĩ đỡ nhớ nhà.',
+    en: 'On Trung Thu nights, Northern villages sang trống quân: young men and women traded folk verses, striking a rope stretched over an upside-down barrel. Phan Kế Bính traced it to Quang Trung’s army.',
+  },
   ruocden: {
+    origin: 'cn',
     tag: 'Truyền thuyết', title: 'Vì sao rước đèn?',
     vi: 'Chuyện kể vua Đường Minh Hoàng được phép thuật đưa lên cung trăng, xem các tiên nữ múa khúc Nghê Thường. Về đến trần gian, vua cho dân chúng rước đèn, bày cỗ đêm rằm tháng Tám. Từ đó rước đèn thành phong tục.',
     en: 'Legend says Emperor Đường Minh Hoàng visited the moon palace, and back on earth ordered lantern parades on this night.',
@@ -74,16 +80,18 @@ export const FACTS = {
     en: 'The lion brings luck; Ông Địa, big-bellied with a palm-leaf fan, leads and teases it to the drum.',
   },
   // ---------- on the moon ----------
-  cuoi1: { tag: 'Sự tích chú Cuội · 1', title: 'Cây thuốc thần', vi: 'Cuội là chàng tiều phu nghèo. Một hôm vào rừng, Cuội thấy hổ mẹ nhai lá một cây đa rồi mớm cho đàn hổ con, và hổ con sống lại. Cuội đào cây đa ấy mang về trồng.', en: 'Cuội the woodcutter saw a tigress revive her cubs with leaves from a banyan, and took the tree home.' },
-  cuoi2: { tag: 'Sự tích chú Cuội · 2', title: 'Chữa bệnh cứu người', vi: 'Nhờ lá đa thần, Cuội cứu sống nhiều người, cả một cô gái nhà phú ông, về sau thành vợ Cuội. Cuội dặn vợ đừng bao giờ tưới nước bẩn vào gốc cây.', en: 'With its leaves he healed many people, and married a girl he saved. He warned her never to water the tree with dirty water.' },
-  cuoi3: { tag: 'Sự tích chú Cuội · 3', title: 'Cây đa bay lên trời', vi: 'Vợ Cuội quên lời dặn. Cây đa bỗng bật gốc, từ từ bay lên trời. Cuội chạy về, móc rìu vào rễ cây níu lại, nhưng cây cứ bay, mang Cuội lên tận cung trăng.', en: 'She forgot. The tree tore free and rose into the sky; Cuội hooked his axe in its roots and was carried up to the moon.' },
-  cuoi4: { tag: 'Sự tích chú Cuội · 4', title: 'Chú Cuội ngồi gốc cây đa', vi: 'Từ đó, mỗi đêm rằm nhìn lên trăng, người ta thấy bóng chú Cuội ngồi dưới gốc cây đa. Câu đồng dao còn truyền: “Thằng Cuội ngồi gốc cây đa, để trâu ăn lúa gọi cha ời ời”.', en: 'Since then, people see Cuội sitting under his banyan in the full moon.' },
+  cuoi1: { origin: 'vn', tag: 'Sự tích chú Cuội · 1', title: 'Cây thuốc thần', vi: 'Cuội là chàng tiều phu nghèo. Một hôm vào rừng, Cuội thấy hổ mẹ nhai lá một cây đa rồi mớm cho đàn hổ con, và hổ con sống lại. Cuội đào cây đa ấy mang về trồng.', en: 'Cuội the woodcutter saw a tigress revive her cubs with leaves from a banyan, and took the tree home.' },
+  cuoi2: { origin: 'vn', tag: 'Sự tích chú Cuội · 2', title: 'Chữa bệnh cứu người', vi: 'Nhờ lá đa thần, Cuội cứu sống nhiều người, cả một cô gái nhà phú ông, về sau thành vợ Cuội. Cuội dặn vợ đừng bao giờ tưới nước bẩn vào gốc cây.', en: 'With its leaves he healed many people, and married a girl he saved. He warned her never to water the tree with dirty water.' },
+  cuoi3: { origin: 'vn', tag: 'Sự tích chú Cuội · 3', title: 'Cây đa bay lên trời', vi: 'Vợ Cuội quên lời dặn. Cây đa bỗng bật gốc, từ từ bay lên trời. Cuội chạy về, móc rìu vào rễ cây níu lại, nhưng cây cứ bay, mang Cuội lên tận cung trăng.', en: 'She forgot. The tree tore free and rose into the sky; Cuội hooked his axe in its roots and was carried up to the moon.' },
+  cuoi4: { origin: 'vn', tag: 'Sự tích chú Cuội · 4', title: 'Chú Cuội ngồi gốc cây đa', vi: 'Từ đó, mỗi đêm rằm nhìn lên trăng, người ta thấy bóng chú Cuội ngồi dưới gốc cây đa. Câu đồng dao còn truyền: “Thằng Cuội ngồi gốc cây đa, để trâu ăn lúa gọi cha ời ời”.', en: 'Since then, people see Cuội sitting under his banyan in the full moon.' },
   hang: {
+    origin: 'cn',
     tag: 'Cung Quảng Hàn', title: 'Chị Hằng và Thỏ Ngọc',
-    vi: 'Trên cung trăng còn có chị Hằng (Hằng Nga) sống trong cung Quảng Hàn, bên cạnh là Thỏ Ngọc ngày đêm giã thuốc trường sinh. Chị Hằng và chú Cuội là đôi bạn quen thuộc trong những bài hát Trung thu.',
-    en: 'Hằng Nga lives in the moon palace, where the jade rabbit pounds the elixir of life.',
+    vi: 'Trên cung trăng còn có chị Hằng (Hằng Nga) sống trong cung Quảng Hàn, bên cạnh là Thỏ Ngọc ngày đêm giã thuốc trường sinh. Chuyện Hằng Nga, Thỏ Ngọc đến từ truyền thuyết Trung Hoa; người Việt ghép chị Hằng với chú Cuội, nhân vật truyện cổ của riêng mình, thành đôi bạn quen thuộc trong những bài hát Trung thu.',
+    en: 'Hằng Nga (Chang’e) and the jade rabbit come from Chinese legend; Vietnamese songs pair her with Cuội, a character of our own folk tales.',
   },
   nghethuong: {
+    origin: 'cn',
     tag: 'Truyền thuyết', title: 'Khúc Nghê Thường',
     vi: 'Đây là điệu múa mà vua Đường Minh Hoàng được xem trên cung trăng: tiên nữ xiêm y rực rỡ múa trong tiếng nhạc trời. Vua nhớ mãi, về trần gian cho soạn thành khúc “Nghê Thường vũ y”.',
     en: 'The dance of rainbow skirts the emperor saw on the moon, and had recreated on earth.',

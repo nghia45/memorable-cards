@@ -161,6 +161,16 @@ export function createAudio() {
       env(g, t, 0.003, 0.12, 0.12);
       o.connect(g).connect(master); o.start(t); o.stop(t + 0.14);
     },
+    thung(t, v = 1) { // trống quân: a stick on the stretched rope, the barrel booming under it: "thình"
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(95 * v, t); o.frequency.exponentialRampToValueAtTime(62 * v, t + 0.35);
+      env(g, t, 0.004, 0.32, 0.55);
+      o.connect(g).connect(master); o.start(t); o.stop(t + 0.6);
+      const bp = ctx.createBiquadFilter(), g2 = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 2;
+      env(g2, t, 0.002, 0.25, 0.08);
+      noiseSrc(t, 0.1).connect(bp).connect(g2).connect(master);
+    },
     knock(t) { // wooden mould on the table: a dull "cộc"
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.06);

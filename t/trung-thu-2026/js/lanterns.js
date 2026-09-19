@@ -18,15 +18,15 @@ const withShade = (g, shade) => {
   return n;
 };
 // A bamboo stick from a to b.
-function stick(a, b, r = 0.0045) {
+function stick(a, b, r = 0.0045, lo = false) {
   const d = new THREE.Vector3().subVectors(b, a), len = d.length();
-  const g = new THREE.CylinderGeometry(r, r, len, 4, 1).translate(0, len / 2, 0);
+  const g = new THREE.CylinderGeometry(r, r, len, lo ? 3 : 4, 1, lo).translate(0, len / 2, 0);
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()));
   return withShade(g.translate(a.x, a.y, a.z), 0);
 }
 
 // ---------- đèn ông sao: two pentagram frames pushed apart at the centre, cellophane over the ten facets ----------
-export function starGeo({ R = 0.2, r = 0.082, depth = 0.075, tassels = true } = {}) {
+export function starGeo({ R = 0.2, r = 0.082, depth = 0.075, tassels = true, lo = false } = {}) {
   const tip = (i) => { const a = Math.PI / 2 + (i / 5) * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0); };
   const rim = Array.from({ length: 10 }, (_, i) => { const a = Math.PI / 2 + (i / 10) * Math.PI * 2, rr = i % 2 ? r : R; return new THREE.Vector3(Math.cos(a) * rr, Math.sin(a) * rr, 0); });
   const parts = [];
@@ -47,9 +47,9 @@ export function starGeo({ R = 0.2, r = 0.082, depth = 0.075, tassels = true } = 
     const a = tip(i), b = tip((i + 2) % 5);
     const lift = (v) => v.clone().setZ(s * depth * (1 - v.length() / R) * 0.9);
     const mid1 = a.clone().lerp(b, 0.38), mid2 = a.clone().lerp(b, 0.62);
-    parts.push(stick(lift(a), lift(mid1)), stick(lift(mid1), lift(mid2)), stick(lift(mid2), lift(b)));
+    parts.push(stick(lift(a), lift(mid1), undefined, lo), stick(lift(mid1), lift(mid2), undefined, lo), stick(lift(mid2), lift(b), undefined, lo));
   }
-  for (let i = 0; i < 10; i++) parts.push(stick(rim[i], rim[(i + 1) % 10], 0.004));
+  for (let i = 0; i < 10; i++) parts.push(stick(rim[i], rim[(i + 1) % 10], 0.004, lo));
   if (tassels) for (const i of [2, 3]) { // paper fringes from the two lower points
     const t = tip(i);
     for (let k = -1; k <= 1; k++) {
@@ -63,13 +63,13 @@ export function starGeo({ R = 0.2, r = 0.082, depth = 0.075, tassels = true } = 
 }
 
 // ---------- đèn cá chép: plump ribbed body, split tail, fins; head toward +z ----------
-export function carpGeo() {
+export function carpGeo(lo = false) {
   const prof = Array.from({ length: 14 }, (_, i) => { const t = i / 13; return new THREE.Vector2(Math.sin(t * Math.PI) ** 0.65 * 0.11 * (1 - t * 0.3) + 0.002, (t - 0.5) * 0.44); });
-  const body = withShade(new THREE.LatheGeometry(prof, 14).rotateX(Math.PI / 2), 1.1);
+  const body = withShade(new THREE.LatheGeometry(prof, lo ? 10 : 14).rotateX(Math.PI / 2), 1.1);
   const parts = [body];
   for (let i = 2; i <= 11; i += 3) { // ribs
     const p = prof[i];
-    parts.push(withShade(new THREE.TorusGeometry(p.x + 0.002, 0.003, 3, 16).translate(0, 0, 0).rotateX(0).translate(0, 0, -p.y), 0));
+    parts.push(withShade(new THREE.TorusGeometry(p.x + 0.002, 0.003, 3, lo ? 10 : 16).translate(0, 0, 0).rotateX(0).translate(0, 0, -p.y), 0));
   }
   const tail = new THREE.Shape(); tail.moveTo(0, 0); tail.quadraticCurveTo(0.08, 0.04, 0.16, 0.13); tail.quadraticCurveTo(0.1, 0.02, 0.17, -0.11); tail.quadraticCurveTo(0.07, -0.03, 0, 0);
   parts.push(withShade(new THREE.ShapeGeometry(tail, 6).rotateY(Math.PI / 2).translate(0, 0, -0.2), 0.8));
@@ -78,17 +78,17 @@ export function carpGeo() {
   for (const s of [-1, 1]) {
     const pf = new THREE.Shape(); pf.moveTo(0, 0); pf.quadraticCurveTo(0.05, -0.02, 0.07, -0.06); pf.lineTo(0, -0.03); pf.closePath();
     parts.push(withShade(new THREE.ShapeGeometry(pf, 3).rotateY(s * 0.5).translate(s * 0.07, -0.04, 0.07), 0.7));
-    parts.push(withShade(new THREE.SphereGeometry(0.012, 6, 4).translate(s * 0.05, 0.03, 0.17), 0)); // eyes
+    parts.push(withShade(new THREE.SphereGeometry(0.012, lo ? 4 : 6, lo ? 3 : 4).translate(s * 0.05, 0.03, 0.17), 0)); // eyes
   }
   return mergeGeometries(parts);
 }
 
 // ---------- round paper lantern with ribs and dark caps ----------
-export function ballGeo() {
-  const body = withShade(new THREE.SphereGeometry(0.13, 16, 12).scale(1, 0.85, 1), 1.1);
+export function ballGeo(lo = false) {
+  const body = withShade(new THREE.SphereGeometry(0.13, lo ? 12 : 16, lo ? 9 : 12).scale(1, 0.85, 1), 1.1);
   const parts = [body];
-  for (let i = 0; i < 8; i++) parts.push(withShade(new THREE.TorusGeometry(0.131, 0.0025, 3, 20, Math.PI).rotateZ(Math.PI / 2).scale(1, 0.85, 1).rotateY((i / 8) * Math.PI), 0));
-  for (const y of [0.105, -0.105]) parts.push(withShade(new THREE.CylinderGeometry(0.05, 0.055, 0.02, 12).translate(0, y, 0), 0));
+  for (let i = 0; i < 8; i++) parts.push(withShade(new THREE.TorusGeometry(0.131, 0.0025, 3, lo ? 10 : 20, Math.PI).rotateZ(Math.PI / 2).scale(1, 0.85, 1).rotateY((i / 8) * Math.PI), 0));
+  for (const y of [0.105, -0.105]) parts.push(withShade(new THREE.CylinderGeometry(0.05, 0.055, 0.02, lo ? 8 : 12).translate(0, y, 0), 0));
   parts.push(withShade(new THREE.CylinderGeometry(0.004, 0.012, 0.12, 5).translate(0, -0.17, 0), 0.6));
   return mergeGeometries(parts);
 }
@@ -119,33 +119,46 @@ export const lanternMat = (() => {
   m.customProgramCacheKey = () => 'lantern2';
   return m;
 })();
-export const tickLanterns = (t) => (time.value = t);
+const eye = new THREE.Vector3();
+export const tickLanterns = (t, cam) => { time.value = t; if (cam) eye.copy(cam); };
 
 export const GEO = { star: starGeo(), carp: carpGeo(), ball: ballGeo() };
+// the same lanterns with fewer segments, for ones far enough away that ribs and sticks are under a pixel
+const LOD_GEO = { star: starGeo({ lo: true }), carp: carpGeo(true), ball: ballGeo(true) };
+const LOD_DIST = 12;
 export const COLORS = { star: [0xff2418, 0xff2418, 0xff2418, 0xffb000, 0xff5a1a, 0x2fbf60, 0x3a8cff, 0xe0339a], carp: [0xff4a14, 0xff2a18, 0xffa010], ball: [0xff2a18, 0xffb21a, 0xff6a20, 0xe83a8a, 0x40b060] };
 export const pickColor = (kind, r) => new THREE.Color(COLORS[kind][Math.floor(r * COLORS[kind].length)]);
 
 // Many hanging lanterns of one kind, one draw call, with soft halos. items: [{ p, c, s, ry, drop }]
 export function lanternField(kind, items, { halo = 0.8, haloOpacity = 0.3 } = {}) {
   const g = new THREE.Group(), n = items.length;
-  const mesh = new THREE.InstancedMesh(GEO[kind], lanternMat, n);
-  items.forEach((it, i) => mesh.setColorAt(i, it.c));
+  // two instanced meshes: lanterns near the eye get the full model, the rest the light one
+  const mesh = new THREE.InstancedMesh(GEO[kind], lanternMat, n), far = new THREE.InstancedMesh(LOD_GEO[kind], lanternMat, n);
+  items.forEach((it, i) => { mesh.setColorAt(i, it.c); far.setColorAt(i, it.c); });
+  const slot = new Int32Array(n).fill(-1); // which mesh each item sat in last pose: 0 near, 1 far
   const glow = new THREE.Points(new THREE.BufferGeometry().setFromPoints(items.map((it) => it.p.clone().setY(it.p.y - (it.drop ?? 0.12) - 0.05))),
     new THREE.PointsMaterial({ map: glowTex, size: halo, color: 0xffa860, transparent: true, opacity: haloOpacity, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
-  g.add(mesh, glow);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(), off = new THREE.Vector3();
+  g.add(mesh, far, glow);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(), off = new THREE.Vector3(), local = new THREE.Vector3();
   const pose = (t) => {
+    local.copy(eye); g.worldToLocal(local);
+    let nn = 0, nf = 0, moved = false;
     items.forEach((it, i) => {
       const sw = Math.sin(t * 0.9 + i * 1.7) * 0.06, tw = Math.sin(t * 0.5 + i) * 0.25;
       q.setFromEuler(e.set(Math.sin(t * 0.7 + i) * 0.04, (it.ry || 0) + tw, sw));
       off.set(0, -(it.drop ?? 0.12), 0).applyQuaternion(q);
       m.compose(p.copy(it.p).add(off), q, s.setScalar(it.s));
-      mesh.setMatrixAt(i, m);
+      const isFar = +(it.p.distanceToSquared(local) > LOD_DIST * LOD_DIST), dst = isFar ? far : mesh, j = isFar ? nf++ : nn++;
+      dst.setMatrixAt(j, m);
+      if (slot[i] !== isFar * n + j) { slot[i] = isFar * n + j; dst.setColorAt(j, it.c); moved = true; }
     });
-    mesh.instanceMatrix.needsUpdate = true;
+    mesh.count = nn; far.count = nf;
+    mesh.instanceMatrix.needsUpdate = far.instanceMatrix.needsUpdate = true;
+    if (moved) mesh.instanceColor.needsUpdate = far.instanceColor.needsUpdate = true;
   };
+  items.forEach((it, i) => mesh.setMatrixAt(i, m.makeTranslation(it.p)));
+  mesh.computeBoundingSphere(); far.boundingSphere = mesh.boundingSphere; // spheres over all items, before the split
   pose(0);
-  mesh.computeBoundingSphere();
   g.userData.tick = pose;
   g.userData.glow = glow.material;
   return g;

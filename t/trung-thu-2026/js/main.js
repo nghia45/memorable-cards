@@ -18,14 +18,14 @@ import { stepTweens, animate, wait, ease, easeOut, lerp } from './tween.js';
 import { createSky, createMoon, MOON_DIR } from './world.js';
 import { streetMaterials } from './street.js';
 import { createHangMa, STOPS, FACADE, EYE } from './hangma.js';
-import { createStops } from './stops.js';
+import { createStops, finishedStar } from './stops.js';
 import { createRooftop } from './roof.js';
 import { createPomelo } from './pomelo.js';
 import { createMemoryLantern } from './keoquan.js';
-import { createDinh, LION_AT } from './dinh.js';
+import { createDinh, LION_AT, TQ_AT } from './dinh.js';
 import { createMoonWorld, R as MR, EYE as MEYE, SPOTS, END } from './moonworld.js';
 import { TABLE_TOP } from './roof.js';
-import { singleLantern, tickLanterns, lanternGlow } from './lanterns.js';
+import { tickLanterns, lanternGlow } from './lanterns.js';
 import { createAudio } from './audio.js';
 import { createRig } from './rig.js';
 import { createUI } from './ui.js';
@@ -96,7 +96,7 @@ await breathe();
 
 // ---------- renderer / scene / post ----------
 const canvas = $('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); // MSAA happens in the composer's target; the canvas only gets a full-screen quad
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
@@ -112,6 +112,7 @@ const camera = new THREE.PerspectiveCamera(50, 1, 0.03, 600);
 scene.add(camera);
 
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+composer.renderTarget2.samples = 0; // only full-screen passes draw into the second buffer, MSAA there is wasted
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.55, 0.82);
 composer.addPass(bloomPass);
@@ -160,6 +161,15 @@ function setLook(name) {
   key.intensity = L.key; hemi.intensity = L.hemi; hemi.color.set(L.hemiSky);
   scene.fog.color.set(L.fog[0]); scene.fog.density = L.fog[1];
   renderer.toneMappingExposure = L.exposure;
+  for (const g of [street.group, roof.group, dinh.group, moonW.group]) { g.updateMatrixWorld(true); moonFirst(g); }
+}
+// Order children nearest-the-moon first. three draws shadow casters in scene-graph order, and with a low moon the
+// street's houses overlap each other in the shadow map; front to back lets the GPU skip the hidden ones early.
+const box = new THREE.Box3(), mid = new THREE.Vector3();
+function moonFirst(g) {
+  const d = new Map(g.children.map((o) => [o, box.setFromObject(o).isEmpty() ? 0 : box.getCenter(mid).dot(MOON_DIR)]));
+  g.children.sort((a, b) => d.get(b) - d.get(a));
+  for (const o of g.children) if (o.children.length > 1) moonFirst(o);
 }
 
 // ---------- act 1 set ----------
@@ -203,13 +213,12 @@ await breathe();
 // The star lantern you made, carried on its stick for the rest of the evening (it rides with the camera).
 const held = new THREE.Group();
 {
-  const lan = singleLantern('star', new THREE.Color(0xff2418));
-  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.007, 0.8, 5).translate(0, -0.4, 0), new THREE.MeshStandardMaterial({ color: 0xd4ad6a, roughness: 0.55 }));
-  stick.position.y = -0.16;
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff7040, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6 }));
-  halo.scale.setScalar(0.9);
-  const light = new THREE.PointLight(0xff5a30, 0, 5, 1.6);
-  held.add(lan, stick, halo, light);
+  const lan = finishedStar(); // the same star as the one made at the stall, on its pink handle
+  // the halo and the light that falls on the street sit behind the star, so they don't wash out its own colours
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff7040, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.35 }));
+  halo.scale.setScalar(0.9); halo.position.z = -0.25;
+  const light = new THREE.PointLight(0xff5a30, 0, 5, 1.6); light.position.z = -0.3;
+  held.add(lan, halo, light);
   held.userData = { light, lan };
   held.scale.setScalar(0.42);
   held.visible = false;
@@ -227,14 +236,15 @@ function fitDist(base, width) {
 const wrapAngle = (a) => THREE.MathUtils.euclideanModulo(a + Math.PI, Math.PI * 2) - Math.PI;
 
 // ---------- interaction plumbing shared by every act ----------
-// waitTap(targets, { hint, scrub, next }) resolves { hit, k0 } on a tap on one of `targets` (any tap if null),
-// Enter, a drag on a target that scrubs past halfway, or the Continue button (hit = null) when `next` is set.
+// waitTap(targets, { hint, scrub, next, carry, back }) resolves { hit, k0 } on a tap on one of `targets` (any tap
+// if null), Enter, a drag on a target that scrubs past halfway, or the Continue button (hit = null) when `next` is set.
+// With `carry` (meshes), the viewer can pick one up and drop it on a target, or tap it; `back` floats it home after.
 let pending = null, mode = 'look', idle = 0;
-function waitTap(targets, { hint, scrub, next } = {}) {
+function waitTap(targets, { hint, scrub, next, carry, back } = {}) {
   if (hint != null) ui.hint(hint);
   nextBtn.hidden = !next;
   document.body.classList.toggle('nav', !!next);
-  return new Promise((res) => { pending = { targets, scrub, res }; });
+  return new Promise((res) => { pending = { targets, scrub, carry, back, res }; });
 }
 function resolvePending(v) {
   if (!pending) return;
@@ -328,7 +338,13 @@ async function actStreet() {
 
 // ---------- act 2: the rooftop ----------
 const roofPose = (yaw = 0) => ({ target: roofW(0, 0.55, 0.05), yaw, pitch: -0.42, dist: fitDist(3.0, 2.8) });
-function setOnly(set) { street.group.visible = set === 'street'; roof.group.visible = set === 'roof'; dinh.group.visible = set === 'dinh'; moonW.group.visible = set === 'moon'; }
+// hidden acts also stop updating their matrices (a few thousand objects), after one last update so lookups stay valid
+function setOnly(set) {
+  for (const [k, g] of [['street', street.group], ['roof', roof.group], ['dinh', dinh.group], ['moon', moonW.group]]) {
+    g.visible = g.matrixWorldAutoUpdate = set === k;
+    if (!g.visible) g.updateMatrixWorld(true);
+  }
+}
 let dim = 0;
 async function actRoof() {
   mode = 'none'; ui.hint('');
@@ -351,21 +367,22 @@ async function actRoof() {
   await memoryLantern();
   await phaCo();
 }
-const POM_HINTS = ['<span>✋</span>Tap the pomelo to score the peel<br><small>or drag it up · drag elsewhere to look around</small>', '<span>✋</span>Tap to lift out the segments', '<span>✋</span>Tap to give the dog its eyes and tail'];
+const POM_HINTS = ['<span>✋</span>Drag the knife onto the pomelo to score the peel<br><small>or tap the pomelo · drag elsewhere to look around</small>', '<span>✋</span>Drag a segment onto the melon and potato frame<br><small>each is pulled open into fluff and pinned with a toothpick</small>', '<span>✋</span>Drag a longan seed from the dish onto the dog’s face<br><small>two seeds for eyes, a triangle of melon for the nose</small>'];
 async function makeDog() {
   const bw = pomelo.group.getWorldPosition(new THREE.Vector3());
   await rig.fly({ target: bw.clone().add(new THREE.Vector3(0.12, 0.14, 0)), yaw: 0.2, pitch: -0.55, dist: fitDist(1.3, 1.1) }, 2.2);
   for (let step = 0; step < 3; step++) {
-    const { k0 } = await waitTap([pomelo.hit], { hint: POM_HINTS[step], scrub: (k) => pomelo.set(step, k) });
+    const { k0, carried } = await waitTap([pomelo.drops[step]], { hint: POM_HINTS[step], scrub: (k) => pomelo.set(step, k), carry: pomelo.tools[step] });
+    if (carried) pomelo.dropped(carried);
     ui.hint('');
-    const dur = [2.2, 3.0, 1.8][step];
+    const dur = [2.2, 4.2, 2.0][step];
     let popped = 0;
     await animate(dur * (1 - k0), (k) => {
       const kk = lerp(k0, 1, k);
       pomelo.set(step, kk);
       if (step === 0 && popped === 0 && kk > 0.35) { popped = 1; audio.play('peel'); }
-      if (step === 1) { const n = Math.floor(Math.max(0, kk - 0.35) / 0.065); while (popped < Math.min(10, n)) { popped++; audio.play('pop'); } }
-      if (step === 2 && popped < 2 && kk > 0.3 + popped * 0.2) { popped++; audio.play('pop'); }
+      if (step === 1) { const n = kk < 0.45 ? 0 : Math.floor((kk - 0.45) / 0.0375) + 1; while (popped < Math.min(13, n)) { popped++; audio.play('pop'); } } // one per toothpick
+      if (step === 2 && popped < 3 && kk > 0.45 + popped * 0.2) { popped++; audio.play('pop'); }
     });
   }
   audio.play('chime');
@@ -494,6 +511,7 @@ async function actParade() {
     stops: [{ u: 0.3, run: carpStop }],
   });
   await lionDance();
+  await trongQuan();
   await storyteller();
 }
 async function carpStop() {
@@ -543,6 +561,27 @@ async function lionDance() {
   await animate(1.6, (k) => { s.lift = 1 - ease(k); s.bow = Math.sin(k * Math.PI) * 0.9; s.step += 0.05; });
   s.dancing = false;
   await ui.fact('lion');
+}
+// hát trống quân: each stroke on the rope brings the next line; he asks, she answers (a courting ca dao)
+const VERSE = [
+  [0, 'Bây giờ mận mới hỏi đào,', 'Now the plum asks the peach,'],
+  [0, 'Vườn hồng đã có ai vào hay chưa?', 'has anyone yet entered the rose garden?'],
+  [1, 'Mận hỏi thì đào xin thưa:', 'Since the plum asks, the peach replies:'],
+  [1, 'Vườn hồng có lối nhưng chưa ai vào.', 'there is a path, but no one has come in.'],
+];
+async function trongQuan() {
+  mode = 'orbit';
+  const at = DINH_AT.clone().add(TQ_AT);
+  rig.setLimits({ pitch: [-0.9, 0.5], dist: [2.0, 8] });
+  await rig.fly({ target: at.clone().add(new THREE.Vector3(0, 0.75, 0)), yaw: 0.15, pitch: -0.14, dist: fitDist(4.8, 3.6) }, 2.4);
+  for (let i = 0; i < VERSE.length; i++) {
+    const [who, line, en] = VERSE[i];
+    await waitTap([dinh.tqHit], { hint: i ? `<span>✋</span>Tap the rope again · ${i} / ${VERSE.length}<br><small>${who ? 'now she answers' : 'he sings on'}</small>` : '<span>✋</span>Tap the rope to strike the trống quân<br><small>thình thùng thình: each stroke brings a line of the song</small>' });
+    [0, 0.26, 0.52].forEach((d, k) => setTimeout(() => { dinh.strike(who); audio.play('thung', k === 1 ? 0.8 : 1); }, d * 1000));
+    ui.hint(`<b>${who ? 'Cô gái' : 'Chàng trai'}:</b> “${line}”<br><small>${en}</small>`);
+    await wait(2.2);
+  }
+  await ui.fact('trongquan');
 }
 async function storyteller() {
   const tw = dinh.teller.g.getWorldPosition(new THREE.Vector3());
@@ -693,19 +732,19 @@ function escapeHtmlLocal(s) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;
 const esc = escapeHtmlLocal;
 const START = new URLSearchParams(location.search).get('act'); // ?act=street|roof|parade|moon skips the start screen
 const ACTS = [
-  ['street', actStreet, '🏮', 'Phố Hàng Mã', 'Làm đèn ông sao, nặn tò he, chọn mặt nạ'],
-  ['roof', actRoof, '🥮', 'Sân thượng', 'Chó bưởi, mâm cỗ, ngắm trăng, đèn kéo quân'],
-  ['parade', actParade, '🥁', 'Rước đèn về sân đình', 'Đèn cá chép, múa lân, nghe kể chuyện'],
-  ['moon', actMoon, '🌕', 'Cung trăng', 'Chú Cuội, chị Hằng, Thỏ Ngọc'],
+  ['street', actStreet, 'Phố Hàng Mã', 'Làm đèn ông sao, nặn tò he, chọn mặt nạ'],
+  ['roof', actRoof, 'Sân thượng', 'Chó bưởi, mâm cỗ, ngắm trăng, đèn kéo quân'],
+  ['parade', actParade, 'Rước đèn về sân đình', 'Đèn cá chép, múa lân, nghe kể chuyện'],
+  ['moon', actMoon, 'Cung trăng', 'Chú Cuội, chị Hằng, Thỏ Ngọc'],
 ];
 // Start screen: begin from the start, or open the chain of chapter cards and pick one. Resolves the chapter index.
 function chooseStart() {
   const el = $('start');
   el.innerHTML = `<div class="pane home"><p class="sub">Gửi ${esc(story.to)}</p><h2>${esc(story.title)}</h2>
       <button type="button" class="big primary" data-act="0">Bắt đầu từ đầu</button>
-      <button type="button" class="big" data-go="map">Chọn chương →</button></div>
+      <button type="button" class="big" data-go="map">Chọn chương</button></div>
     <div class="pane map"><p class="sub">Chọn chương</p>
-      <ol class="chain">${ACTS.map(([, , ic, name, what], i) => `<li><button type="button" data-act="${i}"><span class="n">${i + 1}</span><span class="ic" aria-hidden="true">${ic}</span><span><b>${name}</b><small>${what}</small></span></button></li>`).join('')}</ol>
+      <ol class="chain">${ACTS.map(([, , name, what], i) => `<li><button type="button" data-act="${i}"><span class="n">Chương ${i + 1}</span><b>${name}</b><small>${what}</small></button></li>`).join('')}</ol>
       <button type="button" data-go="home">← Quay lại</button></div>`;
   el.hidden = false;
   setTimeout(() => el.querySelector('.primary').focus({ preventScroll: true }), 50);
@@ -743,7 +782,7 @@ function tap(e) {
   if (ui.cardOpen) return;
   if (pending) {
     if (!pending.targets) return resolvePending({});
-    const hit = pick(e, pending.targets);
+    const hit = pick(e, pending.targets) || (pick(e, pending.carry) && pending.targets[0]);
     if (hit) resolvePending({ hit });
     return;
   }
@@ -753,9 +792,15 @@ canvas.addEventListener('pointerdown', (e) => {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic or already-released pointer */ }
   if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); drag = null; return; }
-  let dm = 'cam', hit = null;
-  if (pending?.scrub && (hit = pick(e, pending.targets))) dm = 'scrub';
-  drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, u: WALK.uTarget, moved: 0, mode: dm, hit, k: 0 };
+  let dm = 'cam', hit = null, carry = null;
+  if (pending?.carry && (hit = pick(e, pending.carry))) {
+    // pick the material up: it follows the pointer on a plane facing the camera, through where it was grabbed
+    dm = 'carry';
+    const at = ray.intersectObject(hit, false)[0].point, m = hit.userData.carryRoot || hit; // grab a part, carry the whole
+    carry = { m, home: m.position.clone(), off: m.getWorldPosition(new THREE.Vector3()).sub(at),
+      plane: new THREE.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()), at) };
+  } else if (pending?.scrub && (hit = pick(e, pending.targets))) dm = 'scrub';
+  drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, u: WALK.uTarget, moved: 0, mode: dm, hit, carry, k: 0 };
   idle = 0;
 });
 canvas.addEventListener('pointermove', (e) => {
@@ -763,12 +808,19 @@ canvas.addEventListener('pointermove', (e) => {
   if (!r.width || !r.height) return;
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2 && pinch0) { const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (mode !== 'walk') rig.zoom(pinch0 / d); pinch0 = d; return; }
-  if (!drag) { canvas.style.cursor = pending?.targets && pick(e, pending.targets) ? 'pointer' : 'grab'; return; }
+  if (!drag) { canvas.style.cursor = pick(e, pending?.carry) ? 'grab' : pending?.targets && pick(e, pending.targets) ? 'pointer' : 'grab'; return; }
   const dx = e.clientX - drag.lx, dy = e.clientY - drag.ly;
   drag.lx = e.clientX; drag.ly = e.clientY;
   drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.x, e.clientY - drag.y));
   idle = 0;
   const up = (drag.y - e.clientY) / r.height;
+  if (drag.mode === 'carry') {
+    const c = drag.carry, p = new THREE.Vector3();
+    ray.setFromCamera(ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    if (ray.ray.intersectPlane(c.plane, p)) c.m.position.copy(c.m.parent.worldToLocal(p.add(c.off)));
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
   if (drag.mode === 'scrub') { if (pending?.scrub) { drag.k = THREE.MathUtils.clamp(up * 2.4, 0, 1); pending.scrub(drag.k); } return; }
   canvas.style.cursor = 'grabbing';
   const first = rig.cur.dist < 0.2, sgn = first ? 1 : -1;
@@ -783,6 +835,15 @@ function endPointer(e) {
   if (!drag) return;
   const d = drag; drag = null;
   canvas.style.cursor = '';
+  if (d.mode === 'carry') { // dropped on a target: the step runs; anywhere else: it floats back
+    const c = d.carry, hit = d.moved >= 8 && pick(e, pending?.targets);
+    if (d.moved < 8 || !hit || pending?.back) {
+      const p0 = c.m.position.clone();
+      animate(0.35, (t) => c.m.position.lerpVectors(p0, c.home, ease(t)));
+    }
+    if (d.moved < 8) tap(e); else if (hit) resolvePending({ hit, carried: c.m });
+    return;
+  }
   if (d.moved < 8) { tap(e); return; }
   if (d.mode === 'scrub' && pending?.scrub) {
     if (d.k > 0.5) resolvePending({ hit: d.hit, k0: d.k });
@@ -857,7 +918,7 @@ function frame() {
   key.position.copy(MOON_DIR).multiplyScalar(30).add(focus);
   key.target.position.copy(focus);
   sky.tick(t);
-  tickLanterns(t);
+  tickLanterns(t, camera.position);
   if (street.group.visible) { street.tick(t, dt, ambient, camera.position); for (const s of stops) s.tick(t, dt); }
   if (dinh.group.visible) { dinh.tick(t, dt, ambient); dinh.lion.update(t, dt, ambient); }
   if (moonW.group.visible) moonW.tick(t, dt);
@@ -877,6 +938,7 @@ function frame() {
     held.position.set(HELD_AT.x + sway.x * 0.05, HELD_AT.y + bob + sway.y * 0.03, HELD_AT.z);
     held.rotation.set(Math.sin(t * 1.3) * 0.06, Math.sin(t * 0.8) * 0.3 + sway.x * 0.6, Math.sin(t * 1.7) * 0.08 - sway.x * 0.4);
     held.userData.light.intensity = 1.6 * (0.9 + Math.sin(t * 11) * 0.06 + Math.sin(t * 5) * 0.04);
+    held.userData.lan.userData.flicker(t);
   }
   lastQ.copy(camera.quaternion);
   renderer.shadowMap.autoUpdate = frames % 2 === 0;
@@ -899,4 +961,4 @@ function reveal() {
 }
 renderer.setAnimationLoop(frame);
 run();
-window.__dbg = { WALK, rig, stops, roof, keo, pomelo, dinh, moonW, resolvePending, get pending() { return pending; }, ui, camera, scene };
+window.__dbg = { renderer, composer, bloomPass, WALK, rig, stops, roof, keo, pomelo, dinh, moonW, resolvePending, get pending() { return pending; }, ui, camera, scene };

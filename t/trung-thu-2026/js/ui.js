@@ -2,6 +2,8 @@
 // full-screen fades, and the mask the viewer puts on at the mask stall. Everything here is plain DOM.
 import { FACTS } from './facts.js';
 
+// Where a legend comes from: Vietnamese Trung Thu mixes its own tales with ones borrowed from China.
+const ORIGIN = { vn: 'Truyện cổ Việt Nam · Vietnamese folk tale', cn: 'Truyền thuyết Trung Hoa · Chinese legend' };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -14,7 +16,7 @@ export function createUI() {
     // Show a fact card; resolves when the viewer taps "Tiếp tục" (or presses Enter).
     fact(id, { button = 'Tiếp tục', extra = '' } = {}) {
       const f = FACTS[id];
-      card.innerHTML = `<p class="tag">Góc tìm hiểu · ${esc(f.tag)}</p><h3>${esc(f.title)}</h3><p>${esc(f.vi)}</p><p class="en">${esc(f.en)}</p>${extra}<button type="button">${esc(button)} →</button>`;
+      card.innerHTML = `<p class="tag">Góc tìm hiểu · ${esc(f.tag)}</p><h3>${esc(f.title)}</h3>${f.origin ? `<p class="origin">${ORIGIN[f.origin]}</p>` : ''}<p>${esc(f.vi)}</p><p class="en">${esc(f.en)}</p>${extra}<button type="button">${esc(button)} →</button>`;
       card.classList.add('on');
       card.setAttribute('aria-hidden', 'false');
       const btn = card.querySelector('button');
@@ -46,9 +48,22 @@ export function createUI() {
       el.classList.add('on');
       return new Promise((r) => setTimeout(r, 1200));
     },
-    // Mask overlay: the painted mask fills the screen with its eye holes around the centre.
+    // Mask overlay, seen from behind as the wearer does: the bare papier-mâché inside (mirrored) fills the screen
+    // around the eye holes, and a hand mirror in the corner shows the painted face.
     mask(canvas, eyes) {
       if (!canvas) { maskC.classList.remove('on'); return; }
+      const face = canvas, S = face.width;
+      canvas = Object.assign(document.createElement('canvas'), { width: S, height: S });
+      const ic = canvas.getContext('2d');
+      ic.setTransform(-1, 0, 0, 1, S, 0); ic.drawImage(face, 0, 0); ic.setTransform(1, 0, 0, 1, 0, 0);
+      ic.globalCompositeOperation = 'source-in';
+      const pg = ic.createRadialGradient(S / 2, S / 2, S * 0.1, S / 2, S / 2, S * 0.55);
+      pg.addColorStop(0, '#d8cbb0'); pg.addColorStop(1, '#9c8c6e');
+      ic.fillStyle = pg; ic.fillRect(0, 0, S, S);
+      ic.globalCompositeOperation = 'source-atop'; // torn newspaper layers, the way giấy bồi is built up
+      ic.fillStyle = 'rgba(60,50,40,.13)';
+      for (let i = 0; i < 90; i++) ic.fillRect(((i * 97) % S), ((i * 53) % S), 20 + (i % 5) * 9, 3);
+      eyes = eyes.map(([ex, ey]) => [1 - ex, ey]).reverse();
       const W = innerWidth, H = innerHeight, dpr = Math.min(2, devicePixelRatio);
       maskC.width = W * dpr; maskC.height = H * dpr;
       const x = maskC.getContext('2d');
@@ -67,6 +82,13 @@ export function createUI() {
         x.fillStyle = g; x.beginPath(); x.ellipse(px, py, r * 1.1, r * 0.85, 0, 0, 7); x.fill();
       }
       x.globalCompositeOperation = 'source-over';
+      // the hand mirror: a mirror flips left and right
+      const mr = Math.min(W, H) * 0.15, mx = W - mr - 20, my = H - mr - 24;
+      x.fillStyle = '#6a3f22'; x.beginPath(); x.arc(mx, my, mr + 7, 0, 7); x.fill();
+      x.save(); x.beginPath(); x.arc(mx, my, mr, 0, 7); x.clip();
+      x.fillStyle = '#2a2622'; x.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+      x.translate(mx, my); x.scale(-1, 1); x.drawImage(face, -mr * 0.95, -mr * 0.95, mr * 1.9, mr * 1.9);
+      x.restore();
       maskC.classList.add('on');
     },
   };

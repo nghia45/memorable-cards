@@ -41,6 +41,155 @@ function marker() { // a soft glow that says "tap here"
   return s;
 }
 
+// The star as the Hàng Mã stalls sell it: ten facets of printed paper alternating red and green, each with a
+// gold flower scroll, gold strips along the outline and ridges, a round printed medallion at the centre, pink tinsel around
+// it and a pink handle. Built in pieces so the stall can assemble it: set(step, k) runs step 0 (sticks from their
+// start pose to the frame), 1 (cellophane on, frame wrapped), 2 (tinsel, handle, candle, light) to k in [0, 1].
+function facetTex(base, dark) {
+  // uv: the facet's rim edge runs along the bottom of the canvas, its apex (the star's centre) is top middle
+  return canvasTex(128, 128, (x, w, h) => {
+    const gr = x.createRadialGradient(64, 80, 6, 64, 70, 90); gr.addColorStop(0, base); gr.addColorStop(1, dark);
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#f3c84e'; x.fillStyle = '#f3c84e'; x.lineCap = 'round'; x.lineJoin = 'round';
+    // hairline border a little inside the triangle's edges
+    x.lineWidth = 1.4; x.beginPath(); x.moveTo(64, 14); x.lineTo(12, 120); x.lineTo(116, 120); x.closePath(); x.stroke();
+    // a printed flower scroll: stem, curling tendrils, leaves and a bloom
+    x.lineWidth = 2;
+    x.beginPath(); x.moveTo(64, 116); x.bezierCurveTo(52, 96, 76, 80, 64, 52); x.stroke();
+    for (const [y, sd, len] of [[104, -1, 18], [96, 1, 16], [84, -1, 14], [74, 1, 12]]) {
+      x.beginPath(); x.moveTo(64, y); x.bezierCurveTo(64 + sd * len * 0.6, y - 12, 64 + sd * len * 1.3, y - 2, 64 + sd * len, y + 6);
+      x.arc(64 + sd * len * 0.9, y + 3, 3, 0, Math.PI * 1.5, sd < 0); x.stroke();
+      x.beginPath(); x.ellipse(64 + sd * len * 0.45, y - 5, 5, 2.2, sd * -0.7, 0, 7); x.fill();
+    }
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; x.beginPath(); x.ellipse(64 + Math.cos(a) * 6, 46 + Math.sin(a) * 6, 4.2, 2.2, a, 0, 7); x.fill(); }
+    x.fillStyle = dark; x.beginPath(); x.arc(64, 46, 2.6, 0, 7); x.fill();
+    x.fillStyle = '#f3c84e';
+    for (const [dx, dy] of [[-22, 112], [22, 112], [-10, 64], [12, 62]]) { x.beginPath(); x.arc(64 + dx, dy, 1.8, 0, 7); x.fill(); }
+  }, 2);
+}
+// the round print at the centre: a gold rim with beads, a red field, a gold lotus and a sun in the middle
+const medallionTex = () => canvasTex(128, 128, (x) => {
+  const c = 64, gold = '#f3c84e';
+  x.fillStyle = gold; x.beginPath(); x.arc(c, c, 63, 0, 7); x.fill();
+  x.fillStyle = '#9a1016'; x.beginPath(); x.arc(c, c, 55, 0, 7); x.fill();
+  x.fillStyle = gold; for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; x.beginPath(); x.arc(c + Math.cos(a) * 50, c + Math.sin(a) * 50, 1.8, 0, 7); x.fill(); }
+  x.strokeStyle = gold; x.lineWidth = 2; x.beginPath(); x.arc(c, c, 45, 0, 7); x.stroke();
+  for (let i = 0; i < 8; i++) { // lotus petals
+    const a = (i / 8) * Math.PI * 2;
+    x.save(); x.translate(c, c); x.rotate(a);
+    x.beginPath(); x.moveTo(0, -14); x.bezierCurveTo(12, -22, 8, -36, 0, -42); x.bezierCurveTo(-8, -36, -12, -22, 0, -14); x.fill();
+    x.fillStyle = '#c0282c'; x.beginPath(); x.moveTo(0, -20); x.bezierCurveTo(5, -25, 3, -32, 0, -35); x.bezierCurveTo(-3, -32, -5, -25, 0, -20); x.fill();
+    x.fillStyle = gold; x.restore();
+  }
+  x.beginPath(); x.arc(c, c, 12, 0, 7); x.fill();
+  x.fillStyle = '#c0282c'; x.beginPath(); x.arc(c, c, 6, 0, 7); x.fill();
+}, 2);
+function buildStar() {
+  const R = 0.2, r = 0.082, depth = 0.075;
+  const tip = (i) => { const a = Math.PI / 2 + (i / 5) * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0); };
+  const rim = Array.from({ length: 10 }, (_, i) => { const a = Math.PI / 2 + (i / 10) * Math.PI * 2, rr = i % 2 ? r : R; return new THREE.Vector3(Math.cos(a) * rr, Math.sin(a) * rr, 0); });
+  const lantern = new THREE.Group();
+  // ten sticks, each tip to tip across one face, bowed with the bulge; raw bamboo until wrapped in gold paper
+  const RAW = new THREE.Color(0xd4ad6a), GOLD = new THREE.Color(0xf0c030);
+  const frameMat = std(0xd4ad6a, { roughness: 0.45 });
+  const sticks = [];
+  for (const s of [1, -1]) for (let i = 0; i < 5; i++) {
+    const a = tip(i), b = tip((i + 2) % 5);
+    const lift = (v) => v.clone().setZ(s * depth * (1 - v.length() / R) * 0.9);
+    const pts = [0, 0.25, 0.5, 0.75, 1].map((t) => lift(a.clone().lerp(b, t)));
+    const mid = pts[2].clone();
+    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => p.clone().sub(mid))), 12, 0.0045, 4), frameMat);
+    m.castShadow = true;
+    m.position.copy(mid);
+    sticks.push({ m, p1: mid, q1: new THREE.Quaternion(), dir: b.clone().sub(a).normalize(), p0: mid.clone(), q0: new THREE.Quaternion() });
+    lantern.add(m);
+  }
+  // cellophane: facets alternate red and green around the star, so each point is half of each
+  const papers = [['#e0302c', '#860e14', 0xff3a18], ['#2fa453', '#0d5227', 0x30d060]].map(([base, dark, glow]) => {
+    const map = facetTex(base, dark);
+    return new THREE.MeshStandardMaterial({ map, emissive: glow, emissiveMap: map, emissiveIntensity: 0, roughness: 0.35, metalness: 0.05, side: THREE.DoubleSide });
+  });
+  const facets = [];
+  for (const s of [1, -1]) for (let i = 0; i < 10; i++) {
+    const a = rim[i], b = rim[(i + 1) % 10], c = new THREE.Vector3(0, 0, s * depth);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const geo = new THREE.BufferGeometry().setFromPoints([c, a, b].map((v) => v.clone().sub(mid)));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute([0.5, 1, 0, 0, 1, 0], 2));
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, papers[i % 2]);
+    m.position.copy(mid); m.scale.setScalar(0.001); m.renderOrder = 2;
+    facets.push(m); lantern.add(m);
+  }
+  const strips = [new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim, true, 'catmullrom', 0), 80, 0.0055, 4, true)];
+  for (const s of [1, -1]) for (const v of rim) strips.push(new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(0, 0, s * depth), v), 1, 0.0035, 4));
+  const edging = new THREE.Mesh(mergeGeometries(strips), std(0xf0c030, { roughness: 0.3, metalness: 0.35, emissive: 0x8a6010, emissiveIntensity: 0.25 }));
+  edging.visible = false; lantern.add(edging);
+  const medMat = new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.2, emissive: 0xffffff, emissiveIntensity: 0 });
+  medMat.map = medMat.emissiveMap = medallionTex();
+  const medallions = [1, -1].map((s) => {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(0.05, 32), medMat);
+    m.position.z = s * (depth + 0.003); if (s < 0) m.rotation.y = Math.PI; m.scale.setScalar(0.001); m.renderOrder = 3;
+    lantern.add(m); return m;
+  });
+  // kim tuyến: a ring of pink tinsel around the tips, shreds sticking out every which way
+  const tinsel = new THREE.Group();
+  const pink = std(0xff3fae, { metalness: 0.7, roughness: 0.28, side: THREE.DoubleSide, emissive: 0x801050, emissiveIntensity: 0.2 });
+  tinsel.add(new THREE.Mesh(new THREE.TorusGeometry(0.225, 0.006, 5, 64), pink));
+  const N = 420, shreds = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.0035, 0.034).translate(0, 0.014, 0), pink, N);
+  const mm = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), at = new THREE.Vector3();
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2 + Math.random() * 0.02, out = Math.random() * Math.PI * 2;
+    // pointing away from the ring's core, round the full circle of its cross-section, with a random twist
+    q.setFromEuler(e.set(Math.sin(out) * 1.2, (Math.random() - 0.5) * 2, a - Math.PI / 2 + Math.cos(out) * 1.2 + (Math.random() - 0.5) * 0.6));
+    mm.compose(at.set(Math.cos(a) * 0.225, Math.sin(a) * 0.225, 0), q, sc.setScalar(0.7 + Math.random() * 0.6));
+    shreds.setMatrixAt(i, mm);
+  }
+  tinsel.add(shreds); tinsel.scale.setScalar(0.001);
+  lantern.add(tinsel);
+  const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.009, 0.04, 8), std(0xfff4dc));
+  candle.position.y = -0.02; candle.scale.setScalar(0.001);
+  const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(2, 1.3, 0.6), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+  flame.scale.set(0.05, 0.08, 1); flame.position.y = 0.01;
+  const light = new THREE.PointLight(0xff5a30, 0, 2.5, 1.5); light.position.z = -0.2; // behind the star, lighting the stall, not washing its face
+  lantern.add(candle, flame, light);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.008, 0.62, 6).translate(0, -0.31, 0), std(0xe8338f, { roughness: 0.35 }));
+  handle.position.y = -0.225; handle.scale.set(1, 0.001, 1); handle.visible = false;
+  lantern.add(handle);
+
+  const glowAll = (v) => { for (const p of papers) p.emissiveIntensity = v; medMat.emissiveIntensity = v * 0.5; };
+  function set(step, k) {
+    if (step === 0) sticks.forEach((st, i) => {
+      const kk = ease(cl(k, i * 0.05, i * 0.05 + 0.5));
+      st.m.position.lerpVectors(st.p0, st.p1, kk); st.m.position.y += Math.sin(kk * Math.PI) * 0.12;
+      st.m.quaternion.slerpQuaternions(st.q0, st.q1, kk);
+    });
+    if (step === 1) {
+      facets.forEach((f, i) => f.scale.setScalar(Math.max(0.001, easeOut(cl(k, i * 0.035, i * 0.035 + 0.22)))));
+      medallions.forEach((m) => m.scale.setScalar(Math.max(0.001, easeOut(cl(k, 0.75, 1)))));
+      frameMat.color.lerpColors(RAW, GOLD, cl(k, 0.1, 0.8));
+      edging.visible = k > 0.7;
+      for (const st of sticks) st.m.visible = k < 0.9; // under the paper now; the gold strips trace the frame
+    }
+    if (step === 2) {
+      tinsel.scale.setScalar(Math.max(0.001, easeOut(cl(k, 0, 0.45))));
+      candle.scale.setScalar(Math.max(0.001, cl(k, 0.3, 0.5)));
+      handle.scale.set(1, Math.max(0.001, cl(k, 0.2, 0.6)), 1); handle.visible = k > 0.2;
+      const lit = cl(k, 0.55, 1);
+      flame.material.opacity = lit; glowAll(lit * 1.1); light.intensity = lit * 1.2;
+    }
+  }
+  const flicker = (t) => { const f = 0.9 + Math.sin(t * 13) * 0.06 + Math.sin(t * 7) * 0.04; glowAll(1.1 * f); flame.scale.set(0.05, 0.08 * f, 1); };
+  return { lantern, sticks, light, candle, set, flicker };
+}
+// The finished star, lit, for carrying through the rest of the evening (the carrier brings its own light).
+export function finishedStar() {
+  const s = buildStar();
+  for (let k = 0; k < 3; k++) s.set(k, 1);
+  s.lantern.remove(s.light);
+  s.lantern.userData.flicker = s.flicker;
+  return s.lantern;
+}
+
 // ======================= 1. đèn ông sao: tie the frame, paste the cellophane, light the candle =======================
 function starStop(audio) {
   const g = new THREE.Group();
@@ -50,94 +199,46 @@ function starStop(audio) {
   const bundle = new THREE.Mesh(mergeGeometries(Array.from({ length: 24 }, (_, i) => new THREE.CylinderGeometry(0.004, 0.004, 0.5, 3).rotateZ(Math.PI / 2 + (Math.random() - 0.5) * 0.08).translate(0, i * 0.0015, (i % 6) * 0.01))), std(0xd8b070));
   bundle.position.set(-0.45, TABLE_H + 0.01, -0.12);
   g.add(bundle);
+  const sheets = [];
   for (let i = 0; i < 3; i++) { // cellophane sheets
     const sheet = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.22).rotateX(-Math.PI / 2), std([0xff2418, 0xffc000, 0x2f9f60][i], { transparent: true, opacity: 0.7, roughness: 0.15, emissive: [0xff2418, 0xffc000, 0x2f9f60][i], emissiveIntensity: 0.08 }));
     sheet.position.set(0.42 + i * 0.03, TABLE_H + 0.003 + i * 0.002, -0.1 + i * 0.05); sheet.rotation.y = i * 0.3;
-    g.add(sheet);
+    g.add(sheet); sheets.push(sheet);
   }
 
-  const R = 0.2, r = 0.082, depth = 0.075;
   const C = new THREE.Vector3(0, TABLE_H + 0.3, 0.08); // where the lantern takes shape, upright, facing the street
-  const tip = (i) => { const a = Math.PI / 2 + (i / 5) * Math.PI * 2; return new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0); };
-  const rim = Array.from({ length: 10 }, (_, i) => { const a = Math.PI / 2 + (i / 10) * Math.PI * 2, rr = i % 2 ? r : R; return new THREE.Vector3(Math.cos(a) * rr, Math.sin(a) * rr, 0); });
-  const lantern = new THREE.Group();
+  const star = buildStar();
+  const { lantern, sticks, light } = star;
   lantern.position.copy(C);
   g.add(lantern);
-  // ten sticks: each runs tip to tip across one face, bowed with the bulge
-  const bamboo = std(0xd4ad6a, { roughness: 0.55 });
-  const sticks = [];
-  for (const s of [1, -1]) for (let i = 0; i < 5; i++) {
-    const a = tip(i), b = tip((i + 2) % 5);
-    const lift = (v) => v.clone().setZ(s * depth * (1 - v.length() / R) * 0.9);
-    const pts = [0, 0.25, 0.5, 0.75, 1].map((t) => lift(a.clone().lerp(b, t)));
-    const mid = pts[2].clone();
-    const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => p.clone().sub(mid))), 12, 0.0045, 4);
-    const m = new THREE.Mesh(geo, bamboo);
-    m.castShadow = true;
-    const q1 = new THREE.Quaternion(), p1 = mid;
-    // scattered on the table: lying flat, random direction
-    const p0 = new THREE.Vector3(-0.3 + Math.random() * 0.5, -C.y + TABLE_H + 0.006 + sticks.length * 0.002, -0.08 + Math.random() * 0.2);
-    const q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, Math.random() * Math.PI));
-    sticks.push({ m, p0, q0, p1, q1 });
-    m.position.copy(p0); m.quaternion.copy(q0);
-    lantern.add(m);
-  }
-  const paper = std(0xff2a18, { transparent: true, opacity: 0.82, roughness: 0.18, metalness: 0.05, emissive: 0xff3010, emissiveIntensity: 0, side: THREE.DoubleSide, depthWrite: false });
-  const facets = [];
-  for (const s of [1, -1]) for (let i = 0; i < 10; i++) {
-    const a = rim[i], b = rim[(i + 1) % 10], c = new THREE.Vector3(0, 0, s * depth);
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    const geo = new THREE.BufferGeometry().setFromPoints([c, a, b].map((v) => v.clone().sub(mid)));
-    geo.computeVertexNormals();
-    const m = new THREE.Mesh(geo, paper);
-    m.position.copy(mid); m.scale.setScalar(0.001); m.renderOrder = 2;
-    facets.push(m); lantern.add(m);
-  }
-  const tassels = [2, 3].map((i) => {
-    const t = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 0.12, 1, 4).translate(0, -0.06, 0), std(0xffd040, { side: THREE.DoubleSide, emissive: 0xffa020, emissiveIntensity: 0 }));
-    t.position.copy(tip(i)); t.scale.set(1, 0.001, 1);
-    lantern.add(t); return t;
+  // the ten sticks come out of the bundle: each starts lying inside it, along its length, hidden until drawn out
+  const X = new THREE.Vector3(1, 0, 0), from = bundle.position.clone().sub(C);
+  sticks.forEach((st, i) => {
+    st.p0 = from.clone().add(new THREE.Vector3(0, 0.004 + (i % 3) * 0.0015, (i % 6) * 0.01));
+    st.q0 = new THREE.Quaternion().setFromUnitVectors(st.dir, X);
+    st.m.visible = false;
   });
-  const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.009, 0.04, 8), std(0xfff4dc));
-  candle.position.y = -0.02; candle.scale.setScalar(0.001);
-  const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(2, 1.3, 0.6), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
-  flame.scale.set(0.05, 0.08, 1); flame.position.y = 0.01;
-  const light = new THREE.PointLight(0xff5a30, 0, 2.5, 1.5);
-  lantern.add(candle, flame, light);
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.007, 0.7, 5).translate(0, -0.35, 0), bamboo);
-  handle.position.copy(tip(0).clone().lerp(tip(3), 0.5)); handle.position.y = -R * 0.8; handle.scale.set(1, 0.001, 1);
-  lantern.add(handle);
+  const spare = new THREE.Mesh(star.candle.geometry.clone().scale(1.6, 1.6, 1.6), star.candle.material); // a candle to carry over, lying on the table
+  spare.rotation.z = Math.PI / 2; spare.position.set(0.3, TABLE_H + 0.015, 0.2); g.add(spare);
   const hit = hitBox(0.7, 0.6, 0.5, 0, TABLE_H + 0.25, 0.05);
   g.add(hit);
+  const set = (step, k) => { if (step === 0) sticks.forEach((st) => (st.m.visible = true)); star.set(step, k); };
 
-  function set(step, k) {
-    if (step === 0) sticks.forEach((s, i) => {
-      const kk = ease(cl(k, i * 0.05, i * 0.05 + 0.5));
-      s.m.position.lerpVectors(s.p0, s.p1, kk); s.m.position.y += Math.sin(kk * Math.PI) * 0.12;
-      s.m.quaternion.slerpQuaternions(s.q0, s.q1, kk);
-    });
-    if (step === 1) facets.forEach((f, i) => f.scale.setScalar(Math.max(0.001, easeOut(cl(k, i * 0.04, i * 0.04 + 0.22)))));
-    if (step === 2) {
-      tassels.forEach((t, i) => t.scale.set(1, Math.max(0.001, easeOut(cl(k, i * 0.15, 0.4 + i * 0.15))), 1));
-      candle.scale.setScalar(Math.max(0.001, cl(k, 0.3, 0.5)));
-      handle.scale.set(1, Math.max(0.001, cl(k, 0.2, 0.6)), 1);
-      const lit = cl(k, 0.55, 1);
-      flame.material.opacity = lit; paper.emissiveIntensity = lit * 1.3; light.intensity = lit * 1.2;
-      tassels.forEach((t) => (t.material.emissiveIntensity = lit * 0.5));
-    }
-  }
   const HINTS = [
-    '<span>✋</span>Tap to tie the bamboo into two stars<br><small>or drag up on the table · drag elsewhere to look around</small>',
-    '<span>✋</span>Tap to paste the red cellophane on<br><small>or drag up</small>',
-    '<span>✋</span>Tap to add the tassels and light the candle<br><small>or drag up</small>',
+    '<span>✋</span>Drag the split bamboo up to the front of the table to tie two stars<br><small>or tap it · drag elsewhere to look around</small>',
+    '<span>✋</span>Drag the red or green cellophane onto the frame: the facets go on red and green in turn<br><small>or tap it</small>',
+    '<span>✋</span>Drag the candle into the lantern: tinsel ring and handle on, and light it<br><small>or tap it</small>',
   ];
+  const STUFF = [[bundle], [sheets[0], sheets[2]], [spare]];
   const DUR = [2.4, 2.6, 2.0];
   return {
     id: 'star', group: g, lantern, maker,
-    pose: { target: new THREE.Vector3(0, TABLE_H + 0.26, 0.1), pitch: -0.28, dist: 1.25 },
+    pose: { target: new THREE.Vector3(0, TABLE_H + 0.2, 0.05), pitch: -0.4, dist: 1.3 }, // the bamboo and cellophane in view
     async run(ctx) {
       for (let s = 0; s < 3; s++) {
-        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], scrub: (k) => set(s, k) });
+        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], carry: STUFF[s], back: true });
+        if (s === 1) sheets[0].visible = sheets[2].visible = false; // they went on the lantern
+        if (s === 2) spare.visible = false;
         let done = 0;
         await ctx.play(DUR[s] * (1 - k0), (k) => {
           const kk = lerp(k0, 1, k); set(s, kk);
@@ -150,7 +251,7 @@ function starStop(audio) {
     },
     tick(t, dt) {
       maker.arms[0].el.rotation.x = -0.6 + Math.sin(t * 2.2) * 0.1; maker.arms[1].el.rotation.x = -0.6 + Math.sin(t * 2.6 + 1) * 0.1;
-      if (light.intensity > 0) { const f = 0.9 + Math.sin(t * 13) * 0.06 + Math.sin(t * 7) * 0.04; paper.emissiveIntensity = 1.3 * f; flame.scale.set(0.05, 0.08 * f, 1); }
+      if (light.intensity > 0) star.flicker(t);
     },
     reset() {}, // (the finished lantern leaves with the viewer)
   };
@@ -165,7 +266,7 @@ function toheStop(audio) {
   stand.add(bx);
   for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.54, 0.035), woodMat); l.position.set(x * 0.24, 0.27, z * 0.14); stand.add(l); }
   const DOUGH = [0xffd23a, 0xe8322a, 0x2e8a3e, 0x2a5ad8, 0xffffff, 0x222222, 0xff8a2a, 0xe86aa8];
-  DOUGH.forEach((c, i) => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8).scale(1.2, 0.7, 1.2), std(c, { roughness: 0.5 })); d.position.set(-0.19 + (i % 4) * 0.125, 0.72, -0.07 + Math.floor(i / 4) * 0.13); stand.add(d); });
+  const lumps = DOUGH.map((c, i) => { const d = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8).scale(1.2, 0.7, 1.2), std(c, { roughness: 0.5 })); d.position.set(-0.19 + (i % 4) * 0.125, 0.72, -0.07 + Math.floor(i / 4) * 0.13); stand.add(d); return d; });
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.7, 10), std(0x8a9a4a, { roughness: 0.8 })); // a banana trunk to stick figures in
   post.position.set(0.2, 1.05, -0.08);
   stand.add(post);
@@ -219,18 +320,19 @@ function toheStop(audio) {
     if (step === 3) { wings.forEach((w) => w.scale.setScalar(Math.max(0.001, easeOut(cl(k, 0, 0.6))))); eyes.forEach((e) => e.scale.setScalar(Math.max(0.001, easeOut(cl(k, 0.5, 1))))); }
   }
   const HINTS = [
-    '<span>✋</span>Tap to roll a ball of yellow dough for the body<br><small>or drag up on the figure · drag elsewhere to look around</small>',
-    '<span>✋</span>Tap to add the head, the red comb and the beak',
-    '<span>✋</span>Tap to fan out the tail feathers',
-    '<span>✋</span>Tap for the wings and the eyes',
+    '<span>✋</span>Drag a lump of yellow dough onto the stick for the body<br><small>or tap it · drag elsewhere to look around</small>',
+    '<span>✋</span>Drag the orange dough on for the head, the red comb and the beak',
+    '<span>✋</span>Drag the green dough on to fan out the tail feathers',
+    '<span>✋</span>Drag the red dough on for the wings and the eyes',
   ];
+  const LUMP = [0, 6, 2, 1]; // which compartment each step takes from
   let working = 0;
   return {
     id: 'tohe', group: g, maker,
-    pose: { target: new THREE.Vector3(-0.05, 0.98, 0.1), pitch: -0.12, dist: 0.9 },
+    pose: { target: new THREE.Vector3(-0.02, 0.86, 0.05), pitch: -0.42, dist: 1.0 }, // the dough box in view below the figure
     async run(ctx) {
       for (let s = 0; s < 4; s++) {
-        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], scrub: (k) => set(s, k) });
+        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], carry: [lumps[LUMP[s]]], back: true });
         working = 1;
         await ctx.play(1.6 * (1 - k0), (k) => set(s, lerp(k0, 1, k)));
         audio.play('pop');
@@ -312,12 +414,14 @@ function maskStop(audio) {
     mesh.castShadow = true;
     mesh.userData.mask = i;
     g.add(mesh);
-    return { ...m, canvas, mesh, home: mesh.position.clone() };
+    return { ...m, canvas, mesh };
   });
   // more masks for sale on the board and on the table
-  const deco = [];
-  for (let i = 0; i < 8; i++) { const src = masks[i % 4]; const d = new THREE.Mesh(src.mesh.geometry, src.mesh.material); d.scale.setScalar(0.7); d.position.set(-0.6 + (i % 4) * 0.4, i < 4 ? 1.95 : 1.1, -0.28); g.add(d); deco.push(d); }
-  for (let i = 0; i < 4; i++) { const d = new THREE.Mesh(masks[3 - i].mesh.geometry, masks[3 - i].mesh.material); d.scale.setScalar(0.8); d.rotation.x = -1.2; d.position.set(-0.45 + i * 0.3, TABLE_H + 0.08, 0.02); g.add(d); }
+  // every one can be tried on
+  const all = masks.map((m) => m.mesh);
+  const more = (i, sc, x, y, z, rx = 0) => { const src = masks[i].mesh, d = new THREE.Mesh(src.geometry, src.material); d.scale.setScalar(sc); d.rotation.x = rx; d.position.set(x, y, z); d.userData.mask = i; d.castShadow = true; g.add(d); all.push(d); };
+  for (let i = 0; i < 8; i++) more(i % 4, 0.7, -0.6 + (i % 4) * 0.4, i < 4 ? 1.95 : 1.1, -0.28);
+  for (let i = 0; i < 4; i++) more(3 - i, 0.8, -0.45 + i * 0.3, TABLE_H + 0.08, 0.02, -1.2);
   const glowM = marker(); glowM.position.set(0, 1.52, -0.18); glowM.scale.set(1.6, 0.5, 1); g.add(glowM);
   return {
     id: 'mask', group: g, maker: seller, masks,
@@ -325,28 +429,29 @@ function maskStop(audio) {
     async run(ctx) {
       let tried = 0;
       for (;;) {
-        const { hit } = await ctx.waitTap(masks.map((m) => m.mesh), { hint: tried ? '<span>✋</span>Try another mask<br><small>or tap Continue when you’re done</small>' : '<span>✋</span>Tap a mask to try it on<br><small>Drag to look around</small>', next: tried > 0 });
+        const { hit } = await ctx.waitTap(all, { hint: tried ? '<span>✋</span>Try another mask<br><small>or tap Continue when you’re done</small>' : '<span>✋</span>Tap a mask to try it on<br><small>Drag to look around</small>', next: tried > 0 });
         if (!hit) break; // Continue
-        const m = masks[hit.userData.mask];
+        const m = masks[hit.userData.mask], mesh = hit, home = mesh.position.clone(), s0 = mesh.scale.x;
         glowM.visible = false;
         audio.play('paper');
-        const cam = ctx.camera, from = m.mesh.position.clone(), q0 = m.mesh.quaternion.clone();
+        const cam = ctx.camera, from = home, q0 = mesh.quaternion.clone();
         const toLocal = (v) => g.worldToLocal(v.clone());
         await ctx.play(0.7, (k) => {
           const e = ease(k), dst = toLocal(cam.localToWorld(new THREE.Vector3(0, 0, -0.25)));
-          m.mesh.position.lerpVectors(from, dst, e);
+          mesh.position.lerpVectors(from, dst, e);
           const qc = g.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(cam.quaternion);
-          m.mesh.quaternion.slerpQuaternions(q0, qc, e);
+          mesh.quaternion.slerpQuaternions(q0, qc, e);
+          mesh.scale.setScalar(lerp(s0, 1, e));
         });
-        m.mesh.visible = false;
+        mesh.visible = false;
         ctx.ui.mask(m.canvas, m.eyes);
         ctx.ui.hint(`<b>${m.name}</b><br><small>${m.line}</small><br><small>Tap to take the mask off</small>`);
         await ctx.waitTap(null, {});
         ctx.ui.mask(null);
-        m.mesh.visible = true;
+        mesh.visible = true;
         audio.play('paper');
-        const p1 = m.mesh.position.clone(), q1 = m.mesh.quaternion.clone();
-        await ctx.play(0.6, (k) => { const e = ease(k); m.mesh.position.lerpVectors(p1, m.home, e); m.mesh.quaternion.slerpQuaternions(q1, q0, e); });
+        const p1 = mesh.position.clone(), q1 = mesh.quaternion.clone();
+        await ctx.play(0.6, (k) => { const e = ease(k); mesh.position.lerpVectors(p1, home, e); mesh.quaternion.slerpQuaternions(q1, q0, e); mesh.scale.setScalar(lerp(1, s0, e)); });
         tried++;
       }
     },
@@ -390,6 +495,7 @@ function cakeStop(audio) {
   cavity.position.y = 0.031;
   const handleM = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.02, 0.22, 10).rotateZ(Math.PI / 2).translate(0.21, 0, 0), std(0x8a5a2a, { roughness: 0.65 }));
   mould.add(block, cavity, handleM);
+  block.userData.carryRoot = mould;
   mould.position.set(0, Y + 0.03, 0.08);
   mould.traverse((o) => o.isMesh && (o.castShadow = true));
   // charcoal stove with a grill, glowing
@@ -413,14 +519,15 @@ function cakeStop(audio) {
   const boxes = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.3), std(0xb3141f, { roughness: 0.4 }));
   boxes.position.set(0.1, Y + 0.05, -0.22); g.add(boxes);
   g.add(cake, ball, mould, stove);
-  const hit = hitBox(0.9, 0.4, 0.5, 0, Y + 0.1, 0.05);
-  g.add(hit);
+  const hit = hitBox(0.9, 0.4, 0.5, 0, Y + 0.1, 0.05), mouldHit = hitBox(0.26, 0.2, 0.26, 0, Y + 0.08, 0.08), stoveHit = hitBox(0.32, 0.3, 0.32, 0.4, Y + 0.12, 0.02);
+  g.add(hit, mouldHit, stoveHit);
   const raw = new THREE.Color(0xe8c890), gold = new THREE.Color(0xb8702a);
   let knocks = 0;
+  const ballFrom = ball.position.clone(), cakeFrom = new THREE.Vector3(0, Y + 0.02, 0.08); // where the viewer let go
   function set(step, k) {
     if (step === 0) { // the ball rolls into the cavity and the palm presses it flat
       const e = ease(cl(k, 0, 0.5));
-      ball.position.set(lerp(-0.25, 0, e), Y + 0.025 + Math.sin(e * Math.PI) * 0.08 + e * 0.04, lerp(0.12, 0.08, e));
+      ball.position.set(lerp(ballFrom.x, 0, e), lerp(ballFrom.y, Y + 0.065, e) + Math.sin(e * Math.PI) * 0.08, lerp(ballFrom.z, 0.08, e));
       const p = ease(cl(k, 0.5, 1));
       ball.scale.set(1 + p * 0.35, 1 - p * 0.55, 1 + p * 0.35);
       ball.position.y -= p * 0.02;
@@ -440,7 +547,7 @@ function cakeStop(audio) {
     }
     if (step === 2) { // onto the grill, turn golden, back to the front
       const go = ease(cl(k, 0, 0.25)), back = ease(cl(k, 0.8, 1));
-      cake.position.set(lerp(0, 0.4, go - back * 0.9), Y + 0.02 + go * 0.13 - back * 0.13 + Math.sin(go * Math.PI) * 0.06, lerp(0.08, 0.02, go) + back * 0.1);
+      cake.position.set(lerp(cakeFrom.x, 0.4, go) - back * 0.36, lerp(cakeFrom.y, Y + 0.15, go) - back * 0.13 + Math.sin(go * Math.PI) * 0.06, lerp(cakeFrom.z, 0.02, go) + back * 0.1);
       const b = cl(k, 0.25, 0.75);
       cakeMat.color.lerpColors(raw, gold, b); side.color.lerpColors(raw, gold, b * 0.9);
       cakeMat.roughness = lerp(0.55, 0.32, b);
@@ -449,9 +556,9 @@ function cakeStop(audio) {
     }
   }
   const HINTS = [
-    '<span>✋</span>Tap to press the dough into the carved mould<br><small>or drag up · drag elsewhere to look around</small>',
-    '<span>✋</span>Tap to knock the cake out of the mould',
-    '<span>✋</span>Tap to bake it golden on the charcoal',
+    '<span>✋</span>Drag the ball of dough into the carved mould<br><small>or tap it · drag elsewhere to look around</small>',
+    '<span>✋</span>Pick up the mould and knock it on the table to turn the cake out<br><small>or tap it</small>',
+    '<span>✋</span>Drag the cake onto the charcoal to bake it golden<br><small>or tap it</small>',
   ];
   return {
     id: 'cake', group: g, maker: baker,
@@ -459,8 +566,11 @@ function cakeStop(audio) {
     async run(ctx) {
       const D = [1.8, 2.4, 3.2];
       for (let s = 0; s < 3; s++) {
-        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], scrub: (k) => set(s, k) });
+        const { k0 } = await ctx.waitTap([[mouldHit, hit, stoveHit][s]], { hint: HINTS[s], carry: [[ball, block, cake][s]], });
         knocks = 0;
+        if (s === 0) ballFrom.copy(ball.position);
+        if (s === 2) cakeFrom.copy(cake.position);
+        if (s === 1) { const p0 = mould.position.clone(), h = new THREE.Vector3(0, Y + 0.03, 0.08); await ctx.play(0.25, (k) => mould.position.lerpVectors(p0, h, ease(k))); }
         await ctx.play(D[s] * (1 - k0), (k) => {
           const kk = lerp(k0, 1, k); set(s, kk);
           if (s === 0 && !knocks && kk > 0.6) { knocks = 1; audio.play('pop'); }
@@ -510,29 +620,38 @@ function boatStop(audio) {
   const lamp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(2, 1.2, 0.5), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
   lamp.scale.setScalar(0.06); lamp.position.set(0, 0.0, -0.07);
   boat.add(hull, deck, cabin, funnel, flag, mast, lamp);
+  hull.userData.carryRoot = boat;
   boat.traverse((o) => o.isMesh && (o.castShadow = true));
   const ON_TABLE = new THREE.Vector3(0.45, stoolTop + 0.03, 0.12);
   boat.position.copy(ON_TABLE); boat.rotation.y = -0.6;
   g.add(boat);
+  // a candle stub on a tin saucer: it goes under the boiler and its flame makes the steam
+  const candle = new THREE.Group();
+  const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.024, 0.006, 16), std(0xb8b8bc, { metalness: 0.8, roughness: 0.35 }));
+  const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.035, 10).translate(0, 0.02, 0), std(0xf2ead8, { roughness: 0.6 }));
+  const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(2, 1.2, 0.5), blending: THREE.AdditiveBlending, depthWrite: false }));
+  flame.scale.setScalar(0.035); flame.position.y = 0.05;
+  candle.add(saucer, stub, flame);
+  saucer.userData.carryRoot = stub.userData.carryRoot = candle;
+  candle.position.set(0.5, stoolTop + 0.03, 0.34); g.add(candle);
   // ripples and smoke puffs
   const ringGeo = new THREE.RingGeometry(0.02, 0.026, 24).rotateX(-Math.PI / 2);
   const rings = Array.from({ length: 10 }, () => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0, depthWrite: false })); m.position.y = stoolTop + 0.102; g.add(m); return { m, t: 9 }; });
   const puffs = Array.from({ length: 8 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x9aa0a8, transparent: true, opacity: 0, depthWrite: false })); g.add(s); return { s, t: 9 }; });
-  const hit = hitBox(0.9, 0.35, 0.8, 0.1, stoolTop + 0.12, 0.05);
-  g.add(hit);
   let running = 0, ang = 0, lastPutt = 0, ri = 0, pi = 0;
   const HINTS = [
-    '<span>✋</span>Tap to light the little oil lamp under the boiler<br><small>Drag to look around</small>',
-    '<span>✋</span>Tap to set the boat on the water',
+    '<span>✋</span>Drag the lit candle into the boat, under its boiler<br><small>or tap the boat · drag elsewhere to look around</small>',
+    '<span>✋</span>Drag the boat onto the water<br><small>or tap it</small>',
   ];
   return {
     id: 'boat', group: g, maker: seller,
     pose: { target: new THREE.Vector3(0.1, stoolTop + 0.1, 0.05), pitch: -0.7, dist: 1.25 },
     async run(ctx) {
-      await ctx.waitTap([hit], { hint: HINTS[0] });
+      await ctx.waitTap([hull], { hint: HINTS[0], carry: [saucer, stub] });
+      candle.visible = false;
       audio.play('flame');
       await ctx.play(0.8, (k) => (lamp.material.opacity = k));
-      await ctx.waitTap([hit], { hint: HINTS[1] });
+      await ctx.waitTap([water], { hint: HINTS[1], carry: [hull] });
       const p0 = boat.position.clone(), r0 = boat.rotation.y;
       const p1 = new THREE.Vector3(0.2, stoolTop + 0.1, 0);
       await ctx.play(1.2, (k) => { const e = ease(k); boat.position.lerpVectors(p0, p1, e); boat.position.y += Math.sin(e * Math.PI) * 0.1; boat.rotation.y = lerp(r0, Math.PI, e); });
