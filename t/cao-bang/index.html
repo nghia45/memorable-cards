@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Non Nước Cao Bằng</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%9B%B0%3C/text%3E%3C/svg%3E">
+<meta name="description" content="Explore one valley of Cao Bằng in 3D: Bản Giốc falls, the jade Quây Sơn river, Mắt Thần mountain, a Tày stilt-house village, Phia Thắp incense, and then singing at dusk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&family=Playfair+Display:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
+<style>
+  :root { --gold: #f3d27e; --ink: #f6f0e4; --bg: #0c1a1a; --jade: #2c9a8e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--ink); font-family: 'Be Vietnam Pro', system-ui, sans-serif; }
+  canvas#scene { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; outline: none; }
+  .fade { opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+  .fade.on { opacity: 1; }
+  #header { position: fixed; top: 18px; left: 0; right: 0; text-align: center; padding: 0 64px; text-shadow: 0 1px 4px rgba(0, 20, 20, .8), 0 2px 18px rgba(0, 0, 0, .45); }
+  #header h1 { margin: 0; font: italic 500 clamp(24px, 4.4vw, 38px) 'Playfair Display', serif; color: #fff6dc; }
+  #header p { margin: 4px 0 0; font-size: 12px; letter-spacing: .28em; text-transform: uppercase; opacity: .85; }
+  #hint { position: fixed; bottom: 72px; left: 0; right: 0; text-align: center; pointer-events: none; font-size: 14px; letter-spacing: .04em;
+    padding: 0 16px; text-shadow: 0 1px 8px rgba(0, 0, 0, .8); transition: opacity .6s ease; }
+  #hint small { display: block; margin-top: 4px; font-size: 12px; opacity: .75; }
+  #hint b { color: var(--gold); font-weight: 600; }
+  nav { position: fixed; bottom: 18px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; padding: 0 16px; pointer-events: none; z-index: 6; }
+  button {
+    pointer-events: auto; font: 600 13px 'Be Vietnam Pro', sans-serif; letter-spacing: .05em; color: var(--gold);
+    background: rgba(8, 30, 30, .55); border: 1px solid rgba(241, 207, 119, .5); border-radius: 999px;
+    padding: 9px 18px; cursor: pointer; backdrop-filter: blur(6px);
+  }
+  button[hidden] { display: none; }
+  button:hover { background: rgba(20, 60, 56, .75); }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .round { position: fixed; top: 14px; z-index: 20; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; }
+  #mute { right: 14px; }
+  #sun { left: 14px; font-size: 20px; line-height: 1; }
+  #mute svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #mute .off, #mute[aria-pressed="true"] .on { display: none; }
+  #mute[aria-pressed="true"] .off { display: inline; }
+  /* landmark labels, pinned over the scene */
+  #labels { position: fixed; inset: 0; pointer-events: none; z-index: 2; transition: opacity .4s ease; }
+  #labels.off { opacity: 0; }
+  #labels.off .label { pointer-events: none; }
+  .label { position: absolute; left: 0; top: 0; padding: 6px 12px 6px 10px; font-size: 12.5px; letter-spacing: .02em; color: #fff8e6; white-space: nowrap;
+    background: rgba(10, 34, 32, .62); border-color: rgba(243, 210, 126, .7); transition: opacity .3s ease; will-change: transform; }
+  .label::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); vertical-align: 1px; }
+  .label::after { content: ''; position: absolute; left: 50%; top: 100%; height: 14px; border-left: 1px solid rgba(243, 210, 126, .7); }
+  .label.hide { opacity: 0; pointer-events: none; }
+  /* fact card: a sheet of giấy bản */
+  #fact { position: fixed; left: 50%; bottom: 16px; width: min(560px, calc(100% - 32px)); translate: -50% 30px; opacity: 0; pointer-events: none;
+    transition: opacity .5s ease, translate .5s ease; z-index: 10; color: #22251c; padding: 18px 20px 16px; border-radius: 14px; box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
+    background: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, .5), transparent 40%), repeating-linear-gradient(115deg, rgba(120, 130, 90, .05) 0 2px, transparent 2px 6px), #efe8d2;
+    border: 1px solid #b9a56a; }
+  #fact.on { opacity: 1; translate: -50% 0; pointer-events: auto; }
+  #fact .tag { margin: 0; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #1f6f66; font-weight: 600; }
+  #fact h3 { margin: 4px 0 8px; font: 600 clamp(20px, 4vw, 26px) 'Playfair Display', serif; color: #1d4a44; }
+  #fact p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.55; }
+  #fact p.en { font-style: italic; font-size: 13px; opacity: .7; }
+  #fact button { display: block; margin: 10px 0 0 auto; color: #fff8e0; background: #1f6f66; border-color: #1f6f66; }
+  #fact button:hover { background: #26867b; }
+  @media (max-height: 640px) { #fact { padding: 12px 16px 10px; } #fact h3 { font-size: 20px; margin: 2px 0 4px; } #fact p { font-size: 13px; line-height: 1.45; } #fact p.en { font-size: 12px; } #fact button { margin-top: 4px; } }
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 16px; text-align: center;
+    background: radial-gradient(ellipse at 50% 60%, #17403a 0%, var(--bg) 70%); color: var(--gold); font: italic 500 20px 'Playfair Display', serif; transition: opacity 1.1s ease; z-index: 30; }
+  #loading.done { opacity: 0; pointer-events: none; }
+  #loading .peaks { width: 120px; height: 70px; background: linear-gradient(#6fb08a, #2c6a50); animation: rise 2.4s ease-in-out infinite;
+    clip-path: path('M0 70 C8 70 10 20 24 18 C38 16 38 70 46 70 C52 70 54 4 70 2 C86 0 88 70 94 70 C100 70 102 34 110 32 C118 30 118 70 120 70 Z'); }
+  @keyframes rise { 50% { transform: translateY(-4px); } }
+  #loading .bar { width: min(220px, 60vw); height: 2px; background: rgba(241, 207, 119, .15); border-radius: 2px; overflow: hidden; }
+  #loading .bar i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); background: var(--gold); transition: transform .4s ease; }
+  #loading small { font: 400 12px 'Be Vietnam Pro', sans-serif; letter-spacing: .2em; text-transform: uppercase; opacity: .6; font-style: normal; }
+  @media (prefers-reduced-motion: reduce) { #loading .peaks { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="scene" tabindex="0" aria-label="A 3D valley of Cao Bằng. Drag or use the arrow keys to turn, pinch, scroll or +/- to zoom; the landmark buttons open notes."></canvas>
+<div id="labels" aria-label="Landmarks"></div>
+<div id="header" class="fade"><h1>Non Nước Cao Bằng</h1><p>Thác Bản Giốc · Bản làng Tày Nùng</p></div>
+<div id="hint" aria-live="polite"></div>
+<button id="sun" class="round" type="button" aria-label="Chuyển sang hoàng hôn · Switch to dusk">☾</button>
+<button id="mute" class="round" type="button" aria-pressed="false" aria-label="Mute sound">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/>
+    <g class="on"><path d="M16 9.5a3.5 3.5 0 0 1 0 5"/><path d="M18.5 7a7 7 0 0 1 0 10"/></g>
+    <g class="off"><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></g></svg>
+</button>
+<nav><button id="home" type="button" hidden>← Toàn cảnh</button></nav>
+<section id="fact" aria-live="polite" aria-hidden="true"></section>
+<div id="loading" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100">
+  <div class="peaks" aria-hidden="true"></div>
+  <div>Đang về Cao Bằng…</div>
+  <div class="bar"><i id="load-bar"></i></div>
+  <small id="load-step">Loading</small>
+</div>
+<script>
+// progress bar: creeps toward 40% until main.js reports milestones; load errors show on screen (phones have no console)
+(() => {
+  const bar = document.getElementById('load-bar'), step = document.getElementById('load-step'), box = document.getElementById('loading');
+  let p = 0, failed = false;
+  const set = (v) => { p = Math.max(p, v); bar.style.transform = `scaleX(${p})`; box.setAttribute('aria-valuenow', Math.round(p * 100)); };
+  const creep = setInterval(() => set(p + (0.4 - p) * 0.06), 120);
+  window.__progress = (v, label) => { if (v >= 0.4) clearInterval(creep); set(v); if (label) step.textContent = label; };
+  const fail = (m) => { if (!failed && !window.__loaded) { failed = true; step.style.cssText = 'text-transform:none;letter-spacing:0;opacity:1;max-width:90vw'; step.textContent = 'Error: ' + m; } };
+  addEventListener('error', (e) => { const t = e.target; if (t && t.tagName && t.tagName !== 'SCRIPT') return; fail(e.message || (t && t.src) || 'resource failed'); }, true);
+  addEventListener('unhandledrejection', (e) => fail(String(e.reason && (e.reason.stack || e.reason.message) || e.reason)));
+})();
+</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/EffectComposer.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/RenderPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/UnrealBloomPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/OutputPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/ShaderPass.js">
+<link rel="modulepreload" href="js/detail.js">
+<link rel="modulepreload" href="js/sites.js">
+<link rel="modulepreload" href="js/noise.js">
+<link rel="modulepreload" href="js/land.js">
+<link rel="modulepreload" href="js/falls.js">
+<link rel="modulepreload" href="js/village.js">
+<link rel="modulepreload" href="js/figures.js">
+<link rel="modulepreload" href="js/sky.js">
+<link rel="modulepreload" href="js/audio.js">
+<link rel="modulepreload" href="js/facts.js">
+<link rel="modulepreload" href="js/rig.js">
+<link rel="modulepreload" href="js/tween.js">
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

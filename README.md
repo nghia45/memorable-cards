@@ -191,3 +191,64 @@ The cultural notes were checked against these pages:
 
 Legend cards carry an origin line: *Truyện cổ Việt Nam* (Cuội) or *Truyền thuyết Trung Hoa* (Hằng Nga and
 the jade rabbit, Đường Minh Hoàng, Nghê Thường).
+
+---
+
+# Template: Non Nước Cao Bằng (`t/cao-bang/`)
+
+A travel showcase, not a greeting: one continuous 3D valley of Cao Bằng to explore freely. Drag to turn, pinch
+or scroll to zoom, tap the ground to glide there, tap a landmark's label to fly in and read its note
+(Vietnamese, one line of English). **← Toàn cảnh** returns to the overview; the ☾/☀ button switches between
+afternoon and dusk. Visiting the then yard brings dusk by itself.
+
+From north to south along the Quây Sơn:
+
+- **Bản Giốc falls**: two tiers of separate strands over a horseshoe cliff, foam and spray in a jade pool,
+  bamboo rafts with visitors in orange life vests.
+- **The valley floor**: rice fields (ripe, green, flooded), haystack karst peaks, **Mắt Thần** mountain with
+  the sky showing through its hole.
+- **A Tày village** on terraces: stilt houses with yin-yang tile roofs, a bamboo water wheel (cọn nước)
+  lifting water into a trough, the Phia Thắp incense yard, Trùng Khánh chestnut trees.
+- **Round the rim** (squeezed in closer than they really are): Trúc Lâm Bản Giốc pagoda on the hill above the
+  falls; Ngườm Ngao cave in a karst tower, stepping stones up to its mouth; Khuổi Ky, the Tày village of stone
+  houses and fences; Thang Hen lake in its bowl of peaks; the 14 hairpins of the Khau Cốc Chà pass; Pác Bó with
+  the jade Lênin stream, Karl Marx mountain, Cốc Bó cave and the stone table; Phja Oắc's pine massif above a
+  sea of cloud. The Phong Nặm valley is the rice fields along the river.
+- **Seasons of flowers and more water**: Thác Mẹ Bồng Con (a broad fall beside a slim one) in the eastern hills;
+  a hillside of white sở (tea-oil) blossom; terraced tam giác mạch slopes in pink and violet; dã quỳ gold in
+  the foothills by Thang Hen; boulders along the river banks. (Different months in reality, shown together.)
+- **The then yard**: at dusk the fire is lit and a then singer plays the đàn tính, with two women shaking
+  xóc nhạc and the neighbours round the fire.
+
+Sound is synthesized (no files): the falls get louder as you get close, birds by day, crickets at dusk, and the
+đàn tính with bells near the yard after dark. No URL parameters.
+
+## Files
+
+- `js/land.js`: the height function everything sits on, terrain + rice-field texture, river water, karst
+  peaks, Mắt Thần, trees, far ranges
+- `js/falls.js`: cliffs, water strands and foam (shaders), spray, rafts
+- `js/sites.js`: the pagoda, caves, Khuổi Ky, the pass road, Pác Bó's details, Phja Oắc's pines and clouds
+- `js/village.js`: stilt houses, water wheel, incense yard, chestnuts, the then yard, farmers
+- `js/detail.js`: per-pixel surface detail from one small noise texture (forested karst with bare limestone on the
+  sheer faces, mossy cliffs at the falls, leafy crowns, ground variation, small bumps that fade with distance)
+- `js/sky.js`: sky dome with drifting clouds, low mist between the peaks, and the afternoon → dusk look
+- `js/main.js`: renderer, landmarks and labels, camera and input, sound levels
+- `js/audio.js`, `js/facts.js`; `rig.js`, `tween.js`, `figures.js` are copied from Trung Thu
+
+## Performance
+
+- On phones (coarse pointer): pixel ratio capped at 1.5, 2× MSAA, a 1024 shadow map, 55% of the trees and fewer
+  mist sprites. Everywhere the pixel ratio also drops step by step if frames run slow.
+- Far trees (hills, karst) use a 120-triangle crown and have no trunk; the richer crown is only for trees you
+  can fly close to. About 0.9 M triangles and ~380 draw calls on desktop, about 4 ms a frame on a laptop GPU.
+- The sun's shadow map re-renders only when the view or the time of day changes. Bloom runs only at dusk.
+  After 8 s without input the card draws every other frame.
+
+## Background
+
+The notes were written from general knowledge; check them against these before sharing widely:
+
+- UNESCO, *Practices of Then by Tày, Nùng and Thái ethnic groups in Viet Nam* (Representative List, 2019)
+- UNESCO Global Geoparks, *Non nuoc Cao Bang* (2018)
+- Wikipedia, *Ban Gioc–Detian Falls*; *Quây Sơn River*; *Pác Bó*; *Phia Oắc – Phia Đén National Park*

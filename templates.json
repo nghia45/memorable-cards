@@ -23,6 +23,10 @@
     {
       "id": "birthday",
       "label": "Birthday"
+    },
+    {
+      "id": "travel",
+      "label": "Travel"
     }
   ],
   "templates": [
@@ -64,6 +68,28 @@
       "length": "~7 min",
       "url": "t/trung-thu-2026/",
       "poster": "previews/trung-thu-2026.jpg"
+    },
+    {
+      "id": "cao-bang",
+      "title": "Non Nước Cao Bằng",
+      "category": "travel",
+      "description": "Explore one valley of Cao Bằng: Bản Giốc falls and the jade Quây Sơn, Mắt Thần mountain, a Tày stilt-house village with its water wheel and Phia Thắp incense, then singing round the fire at dusk.",
+      "tags": [
+        "Cao Bằng",
+        "Bản Giốc",
+        "waterfall",
+        "karst",
+        "Tày",
+        "Nùng",
+        "hát then",
+        "đàn tính",
+        "travel",
+        "landscape",
+        "culture"
+      ],
+      "length": "free to explore",
+      "url": "t/cao-bang/",
+      "poster": "previews/cao-bang.jpg"
     },
     {
       "id": "snowglobe",
