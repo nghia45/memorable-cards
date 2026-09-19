@@ -259,7 +259,7 @@ const ctx = { camera, rig, ui, audio, waitTap, play: animate, get held() { retur
 // walk({ point(u), heading(u), stops: [{ u, run }], speed, tick(u, dt) }) resolves at the end of the path.
 // The walk pauses at each stop until its run() resolves, then the viewer is set back on the path.
 const WALK = { u: 0, uTarget: 0, next: 0, active: false, cfg: null };
-function walkHint() { ui.hint('<span>↑</span>Swipe up or scroll to walk · drag sideways to look around'); }
+function walkHint() { ui.hint('<span>↑</span>Swipe up to walk, down to step back · drag to look around'); }
 function walk(cfg) {
   Object.assign(WALK, { u: 0, uTarget: 0, next: 0, cfg, active: true });
   mode = 'walk';
@@ -766,7 +766,7 @@ async function run() {
 }
 replayBtn.onclick = () => location.reload();
 
-// ---------- input: tap to act, drag to turn (360°), wheel/pinch to zoom or walk, arrows too ----------
+// ---------- input: tap to act, drag to turn (360°), swipe to walk, wheel/pinch to zoom or walk, arrows too ----------
 const ndc = new THREE.Vector2(), ray = new THREE.Raycaster();
 const pointers = new Map();
 let drag = null, pinch0 = 0;
@@ -786,7 +786,6 @@ function tap(e) {
     if (hit) resolvePending({ hit });
     return;
   }
-  if (mode === 'walk') WALK.uTarget += 0.03;
 }
 canvas.addEventListener('pointerdown', (e) => {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -800,7 +799,7 @@ canvas.addEventListener('pointerdown', (e) => {
     carry = { m, home: m.position.clone(), off: m.getWorldPosition(new THREE.Vector3()).sub(at),
       plane: new THREE.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()), at) };
   } else if (pending?.scrub && (hit = pick(e, pending.targets))) dm = 'scrub';
-  drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, u: WALK.uTarget, moved: 0, mode: dm, hit, carry, k: 0 };
+  drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), yaw: rig.goal.yaw, pitch: rig.goal.pitch, moved: 0, mode: dm, hit, carry, k: 0 };
   idle = 0;
 });
 canvas.addEventListener('pointermove', (e) => {
@@ -824,10 +823,8 @@ canvas.addEventListener('pointermove', (e) => {
   if (drag.mode === 'scrub') { if (pending?.scrub) { drag.k = THREE.MathUtils.clamp(up * 2.4, 0, 1); pending.scrub(drag.k); } return; }
   canvas.style.cursor = 'grabbing';
   const first = rig.cur.dist < 0.2, sgn = first ? 1 : -1;
-  if (mode === 'walk') {
-    WALK.uTarget = drag.u + up * 0.25;
-    rig.rotate(dx * 0.005, 0);
-  } else rig.rotate(sgn * dx * 0.006, sgn * dy * 0.005);
+  if (mode === 'walk') rig.rotate(dx * 0.005, dy * 0.003); // walking is a swipe, see endPointer
+  else rig.rotate(sgn * dx * 0.006, sgn * dy * 0.005);
 });
 function endPointer(e) {
   pointers.delete(e.pointerId);
@@ -845,6 +842,13 @@ function endPointer(e) {
     return;
   }
   if (d.moved < 8) { tap(e); return; }
+  // a quick vertical flick walks (up: forward, down: back) and undoes the little turn it made; a slower drag only looks
+  const sx = e.clientX - d.x, sy = e.clientY - d.y, h = canvas.clientHeight || 1;
+  if (mode === 'walk' && d.mode === 'cam' && performance.now() - d.t < 350 && Math.abs(sy) > 30 && Math.abs(sy) > Math.abs(sx) * 1.5) {
+    rig.goal.yaw = d.yaw; rig.goal.pitch = d.pitch;
+    WALK.uTarget -= Math.sign(sy) * THREE.MathUtils.clamp((Math.abs(sy) / h) * 0.2, 0.03, 0.1);
+    return;
+  }
   if (d.mode === 'scrub' && pending?.scrub) {
     if (d.k > 0.5) resolvePending({ hit: d.hit, k0: d.k });
     else { const sc = pending.scrub, k = d.k; animate(0.3, (t) => sc(lerp(k, 0, t))); }
