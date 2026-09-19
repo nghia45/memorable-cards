@@ -1,0 +1,32 @@
+{
+  "to": "Minh",
+  "from": "Lan",
+  "title": "Một năm của chúng mình",
+  "message": "Cảm ơn anh vì một năm thật đẹp. Chúc anh năm Đinh Mùi an khang, bình an và mãi cười như những ngày mình đã đi qua!",
+  "memories": [
+    {
+      "photo": "photos/1-home.svg",
+      "date": "Tháng 2, 2026",
+      "caption": "Bữa cơm tất niên đầu tiên ở nhà mình, nồi bánh chưng thức trắng đêm.",
+      "theme": "home"
+    },
+    {
+      "photo": "photos/2-journey.svg",
+      "date": "Tháng 5, 2026",
+      "caption": "Chuyến đi Hà Giang, hai đứa trên một chiếc xe máy, qua đèo Mã Pí Lèng.",
+      "theme": "journey"
+    },
+    {
+      "photo": "photos/3-celebration.svg",
+      "date": "Tháng 9, 2026",
+      "caption": "Đêm pháo hoa bên sông Hàn, lần đầu anh nói ‘mình về chung một nhà nhé’.",
+      "theme": "celebration"
+    },
+    {
+      "photo": "photos/4-together.svg",
+      "date": "Tháng 12, 2026",
+      "caption": "Những buổi tối ngồi bên hồ Gươm, chẳng cần nói gì cũng thấy đủ.",
+      "theme": "together"
+    }
+  ]
+}

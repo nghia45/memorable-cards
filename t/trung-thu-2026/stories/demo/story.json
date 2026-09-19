@@ -1,0 +1,44 @@
+{
+  "to": "Chị Hai",
+  "from": "Út",
+  "title": "Trung Thu tuổi thơ mình",
+  "message": "Nhớ những đêm rằm chị dắt em đi rước đèn khắp xóm. Chúc chị một mùa Trung Thu đoàn viên, lúc nào cũng tròn đầy như trăng rằm!",
+  "memories": [
+    {
+      "photo": "photos/6-pomelo.svg",
+      "date": "Rằm tháng Tám, 1998",
+      "caption": "Con chó bưởi đầu tiên chị làm cho em, mắt bằng đinh hương, đuôi bằng vỏ bưởi.",
+      "theme": "pomelo"
+    },
+    {
+      "photo": "photos/4-feast.svg",
+      "date": "Rằm tháng Tám, 1999",
+      "caption": "Cả nhà ngồi phá cỗ ngoài sân, bà bổ bánh nướng chia cho từng đứa.",
+      "theme": "feast"
+    },
+    {
+      "photo": "photos/3-crafting.svg",
+      "date": "Tháng Tám, 2000",
+      "caption": "Hai chị em ngồi dán giấy bóng kính cho chiếc đèn ông sao, tay dính đầy hồ.",
+      "theme": "crafting"
+    },
+    {
+      "photo": "photos/2-liondance.svg",
+      "date": "Rằm tháng Tám, 2000",
+      "caption": "Tiếng trống lân đầu ngõ, em nấp sau lưng chị mà vẫn cố nhìn ông Địa.",
+      "theme": "liondance"
+    },
+    {
+      "photo": "photos/1-procession.svg",
+      "date": "Rằm tháng Tám, 2001",
+      "caption": "Rước đèn khắp xóm, vừa đi vừa hát “Tết Trung Thu rước đèn đi chơi”.",
+      "theme": "procession"
+    },
+    {
+      "photo": "photos/5-moon.svg",
+      "date": "Đêm rằm, 2002",
+      "caption": "Nằm trên chiếu nhìn trăng, chị chỉ cho em thấy chú Cuội ngồi gốc cây đa.",
+      "theme": "moon"
+    }
+  ]
+}

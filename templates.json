@@ -1,0 +1,138 @@
+{
+  "categories": [
+    {
+      "id": "lunar-new-year",
+      "label": "Lunar New Year"
+    },
+    {
+      "id": "mid-autumn",
+      "label": "Mid-Autumn"
+    },
+    {
+      "id": "christmas",
+      "label": "Christmas"
+    },
+    {
+      "id": "new-year",
+      "label": "New Year"
+    },
+    {
+      "id": "anniversary",
+      "label": "Anniversary"
+    },
+    {
+      "id": "birthday",
+      "label": "Birthday"
+    }
+  ],
+  "templates": [
+    {
+      "id": "tet-2027",
+      "title": "Lantern River",
+      "category": "lunar-new-year",
+      "description": "Drift down a river of lotus lanterns, open your memories on a hoa mai tree, and receive a lì xì at dawn.",
+      "tags": [
+        "Tết",
+        "lì xì",
+        "hoa mai",
+        "photos",
+        "memories",
+        "year of the goat"
+      ],
+      "length": "~2 min",
+      "url": "t/tet-2027/",
+      "poster": "previews/tet-2027.jpg",
+      "preview": "previews/tet-2027.webm"
+    },
+    {
+      "id": "trung-thu-2026",
+      "title": "Đêm Rằm",
+      "category": "mid-autumn",
+      "description": "One Mid-Autumn night of a Hanoi childhood: build a star lantern on Hàng Mã, set the moon tray on the rooftop, drum for the lion dance, then walk the moon to meet Chị Hằng and Chú Cuội. Each stop teaches a custom.",
+      "tags": [
+        "Trung Thu",
+        "mid-autumn",
+        "lanterns",
+        "đèn ông sao",
+        "múa lân",
+        "chó bưởi",
+        "mooncake",
+        "childhood",
+        "memories",
+        "photos"
+      ],
+      "length": "~7 min",
+      "url": "t/trung-thu-2026/",
+      "poster": "previews/trung-thu-2026.jpg"
+    },
+    {
+      "id": "snowglobe",
+      "title": "Snowglobe Letters",
+      "category": "christmas",
+      "description": "Shake a snow globe to reveal a tiny village; each lit window opens a letter.",
+      "tags": [
+        "snow",
+        "village",
+        "letters"
+      ],
+      "soon": true,
+      "art": {
+        "from": "#123a2f",
+        "to": "#b3261e",
+        "glyph": "❄"
+      }
+    },
+    {
+      "id": "midnight-fireworks",
+      "title": "Midnight Fireworks",
+      "category": "new-year",
+      "description": "Count down on a rooftop and light fireworks that spell out your wishes.",
+      "tags": [
+        "countdown",
+        "fireworks",
+        "wishes"
+      ],
+      "soon": true,
+      "art": {
+        "from": "#0d1330",
+        "to": "#6b3fa0",
+        "glyph": "✦"
+      }
+    },
+    {
+      "id": "our-constellation",
+      "title": "Our Constellation",
+      "category": "anniversary",
+      "description": "Connect the stars of your favourite moments into a constellation that is yours.",
+      "tags": [
+        "stars",
+        "memories",
+        "love",
+        "photos"
+      ],
+      "soon": true,
+      "art": {
+        "from": "#1a1030",
+        "to": "#c2587a",
+        "glyph": "✧"
+      }
+    },
+    {
+      "id": "candle-wish",
+      "title": "Candle Wish",
+      "category": "birthday",
+      "description": "A cake assembles layer by layer; blow out the candles to open the card.",
+      "tags": [
+        "cake",
+        "candles",
+        "party"
+      ],
+      "soon": true,
+      "art": {
+        "from": "#3a1d0e",
+        "to": "#e0913a",
+        "glyph": "✺"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <defs><linearGradient id="n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#101a40"/><stop offset="1" stop-color="#2a2050"/></linearGradient></defs>
+  <rect width="800" height="800" fill="url(#n)"/><circle cx="160" cy="150" r="70" fill="#fff4d0"/>
+  <ellipse cx="400" cy="560" rx="340" ry="130" fill="#5a2a16"/><ellipse cx="400" cy="540" rx="280" ry="95" fill="#9a1410"/>
+  <ellipse cx="300" cy="520" rx="60" ry="26" fill="#b8742e"/><ellipse cx="300" cy="510" rx="60" ry="26" fill="#d8913e"/>
+  <circle cx="470" cy="490" r="62" fill="#7aa22a"/><g fill="#f07a1a"><circle cx="560" cy="560" r="30"/><circle cx="600" cy="545" r="26"/></g>
+  <ellipse cx="220" cy="580" rx="46" ry="16" fill="#f2eee4"/>
+  <text x="400" y="750" text-anchor="middle" font-family="serif" font-size="44" fill="#f7e2a8" opacity=".85">Phá cỗ trông trăng</text>
+</svg>

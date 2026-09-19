@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <defs><radialGradient id="l" cx="50%" cy="20%" r="80%"><stop offset="0" stop-color="#ffe0a0"/><stop offset="1" stop-color="#7a3a1a"/></radialGradient></defs>
+  <rect width="800" height="800" fill="url(#l)"/>
+  <rect y="480" width="800" height="320" fill="#d9c08a"/><g fill="#a3222a"><rect y="520" width="800" height="10"/><rect y="760" width="800" height="10"/></g>
+  <path d="M400 200 l40 90 97 8 -74 63 22 95 -85 -50 -85 50 22 -95 -74 -63 97 -8z" fill="none" stroke="#c8a060" stroke-width="10"/>
+  <path d="M400 230 l30 70 72 6 -55 47 17 70 -64 -37 z" fill="#ff3a3a" opacity=".75"/>
+  <g stroke="#d8b880" stroke-width="8"><path d="M120 640 L330 600"/><path d="M130 670 L340 630"/><path d="M470 650 L690 610"/></g>
+  <rect x="520" y="660" width="120" height="70" fill="#3a9aff" opacity=".7"/><rect x="560" y="640" width="110" height="60" fill="#ffd23a" opacity=".7"/>
+  <text x="400" y="120" text-anchor="middle" font-family="serif" font-size="44" fill="#5a2a12" opacity=".85">Tự làm đèn ông sao</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <rect width="800" height="800" fill="#0a1238"/>
+  <circle cx="400" cy="340" r="240" fill="#fff4d6"/><circle cx="400" cy="340" r="300" fill="#fff4d6" opacity=".1"/>
+  <g fill="#c9b48e" opacity=".7"><path d="M300 470 q-10 -120 10 -180 q-60 -40 -30 -90 q60 -40 100 10 q50 -40 90 10 q20 60 -60 80 q-20 60 -10 170z"/><circle cx="440" cy="440" r="22"/><path d="M420 460 q-10 50 20 80 h60 q0 -40 -30 -60z"/></g>
+  <g fill="#fff" opacity=".6"><ellipse cx="150" cy="620" rx="120" ry="18"/><ellipse cx="650" cy="660" rx="140" ry="20"/></g>
+  <text x="400" y="750" text-anchor="middle" font-family="serif" font-size="44" fill="#f7e2a8" opacity=".85">Chú Cuội, chị Hằng</text>
+</svg>
