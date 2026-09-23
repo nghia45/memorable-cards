@@ -289,11 +289,11 @@ export function createRooftop(mats) {
 
   // ---------- tray slots: each becomes an item when the viewer sets it ----------
   const SLOTS = [
-    { id: 'tiensi', at: [0, -0.2], make: tienSi, line: '<b>Ông tiến sĩ giấy</b> ngồi giữa mâm: mong con chăm học.' },
-    { id: 'fruit', at: [-0.28, -0.12], make: fruitPlate, line: '<b>Mâm ngũ quả</b>: bưởi, na, hồng, cam, lựu, chuối.' },
-    { id: 'cake', at: [0.28, -0.08], make: cakePlate, line: '<b>Bánh nướng, bánh dẻo</b>, cắt ra chia cả nhà.' },
-    { id: 'pig', at: [0.2, 0.24], make: pigCakes, line: '<b>Bánh con lợn, con cá</b> cho các cháu nhỏ.' },
-    { id: 'tea', at: [-0.05, 0.3], make: teaSet, line: '<b>Ấm trà sen</b> cho ông bà ngắm trăng.' },
+    { id: 'tiensi', at: [0, -0.2], make: tienSi, line: 'trayTiensi' },
+    { id: 'fruit', at: [-0.28, -0.12], make: fruitPlate, line: 'trayFruit' },
+    { id: 'cake', at: [0.28, -0.08], make: cakePlate, line: 'trayCake' },
+    { id: 'pig', at: [0.2, 0.24], make: pigCakes, line: 'trayPig' },
+    { id: 'tea', at: [-0.05, 0.3], make: teaSet, line: 'trayTea' },
   ];
   const DOG_AT = new THREE.Vector3(-0.3, TABLE_TOP, 0.2);
   const slots = SLOTS.map((s) => {

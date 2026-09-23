@@ -1,9 +1,10 @@
 // Overlay UI: the hint line, the "Góc tìm hiểu" fact card, the memory card (photo + caption), the act title,
 // full-screen fades, and the mask the viewer puts on at the mask stall. Everything here is plain DOM.
 import { FACTS } from './facts.js';
+import { t, lang } from './lang.js';
 
 // Where a legend comes from: Vietnamese Trung Thu mixes its own tales with ones borrowed from China.
-const ORIGIN = { vn: 'Truyện cổ Việt Nam · Vietnamese folk tale', cn: 'Truyền thuyết Trung Hoa · Chinese legend' };
+const ORIGIN = { vn: 'originVn', cn: 'originCn' };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -13,10 +14,16 @@ export function createUI() {
   const ui = {
     hint(html) { hint.innerHTML = html || ''; },
     get cardOpen() { return !!closeCard; },
-    // Show a fact card; resolves when the viewer taps "Tiếp tục" (or presses Enter).
-    fact(id, { button = 'Tiếp tục', extra = '' } = {}) {
-      const f = FACTS[id];
-      card.innerHTML = `<p class="tag">Góc tìm hiểu · ${esc(f.tag)}</p><h3>${esc(f.title)}</h3>${f.origin ? `<p class="origin">${ORIGIN[f.origin]}</p>` : ''}<p>${esc(f.vi)}</p><p class="en">${esc(f.en)}</p>${extra}<button type="button">${esc(button)} →</button>`;
+    // Show a fact card in the chosen language; resolves when the viewer taps the button (or presses Enter).
+    fact(id, { button = t('btnContinue'), extra = '' } = {}) {
+      const f = FACTS[id], en = lang === 'en', both = lang === 'both';
+      const tag = en ? f.tagEn : f.tag;
+      const head = en ? f.titleEn : f.title;
+      // in "both" the Vietnamese name is the heading, and the English gloss goes under it without repeating it
+      const cut = f.titleEn.startsWith(f.title) ? f.titleEn.slice(f.title.length).replace(/^\s*—\s*/, '') : f.titleEn;
+      const gloss = cut.charAt(0).toUpperCase() + cut.slice(1);
+      const body = `<p>${esc(en ? f.en : f.vi)}</p>${both ? `<p class="en">${esc(f.en)}</p>` : ''}`;
+      card.innerHTML = `<p class="tag">${t('factTag')} · ${esc(tag)}</p><h3>${esc(head)}</h3>${both ? `<p class="gloss">${esc(gloss)}</p>` : ''}${f.origin ? `<p class="origin">${t(ORIGIN[f.origin])}</p>` : ''}${body}${extra}<button type="button">${button} →</button>`;
       card.classList.add('on');
       card.setAttribute('aria-hidden', 'false');
       const btn = card.querySelector('button');
@@ -30,7 +37,7 @@ export function createUI() {
     // A memory from story.json: photo, date, caption. Resolves on close.
     memory(m, { index, total }) {
       const img = m.img ? `<img alt="" src="${esc(m.img.src)}">` : '';
-      mem.innerHTML = `<div class="paper">${img}<p class="date">${esc(m.date)}</p><p class="cap">${esc(m.caption)}</p><p class="count">${index + 1} / ${total}</p></div><button type="button">Quay tiếp đèn →</button>`;
+      mem.innerHTML = `<div class="paper">${img}<p class="date">${esc(m.date)}</p><p class="cap">${esc(m.caption)}</p><p class="count">${index + 1} / ${total}</p></div><button type="button">${esc(t('keoNext'))}</button>`;
       mem.classList.add('on');
       const btn = mem.querySelector('button');
       setTimeout(() => btn.focus({ preventScroll: true }), 50);
@@ -44,7 +51,7 @@ export function createUI() {
     // The ending: the message, written in moonlight over the scene.
     message({ to, from, message }) {
       const el = document.getElementById('final');
-      el.innerHTML = `<p class="to">Gửi ${esc(to)}</p><p class="msg">${esc(message)}</p><p class="from">${esc(from)}</p>`;
+      el.innerHTML = `<p class="to">${t('startTo', esc(to))}</p><p class="msg">${esc(message)}</p><p class="from">${esc(from)}</p>`;
       el.classList.add('on');
       return new Promise((r) => setTimeout(r, 1200));
     },

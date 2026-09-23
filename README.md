@@ -139,14 +139,43 @@ Same as the Tết card: copy `t/trung-thu-2026/stories/demo/` to `stories/<id>/`
 The memories are the pictures on the đèn kéo quân. Share `…/t/trung-thu-2026/?card=<id>`.
 The card opens on a start screen: **Bắt đầu từ đầu** plays from the beginning, **Chọn chương** shows the four chapters as a linked chain of cards to jump into. `?act=street|roof|parade|moon` skips the start screen and opens that chapter.
 
+## Language
+
+The card plays in **Tiếng Việt**, **English**, or **Cả hai · Both** — Vietnamese in full, with the English under it
+in italic. The viewer picks on the start screen, next to **Chọn chương**, and the choice is remembered; `?lang=vi`,
+`?lang=en` or `?lang=both` opens straight into one, which is what the `?act=` links need since they skip that
+screen. Failing both, it follows the browser.
+
+"Both" is composed automatically: a short plain label sits on one line (`Chương 1 · Chapter 1`), and anything longer
+or with markup gets the English underneath. A hint made of an instruction and a `<small>` aside pairs up line for
+line, so it reads instruction · instruction · aside · aside instead of burying one language under the other. Seven
+strings are composed by hand instead, where that rule reads badly — the act titles, the aria-labels a screen reader
+speaks (no markup allowed there), and the mask line, whose text arrives already translated and must not be doubled.
+Those carry a `both:` of their own, and `check-lang.mjs` leaves their wording to you.
+
+Every string the viewer reads lives in `js/lang.js` as a `vi`/`en` pair — add a string there, not at the call site.
+What stays Vietnamese in both: the signs and boards painted into the scene, because a Hàng Mã shopfront is in
+Vietnamese, and anything the sender wrote in `story.json`. Sung verse keeps its Vietnamese original and carries the
+English underneath as a subtitle. The Góc tìm hiểu cards are written out in full in both languages and show one.
+
+`node scripts/check-lang.mjs` checks that no string exists in only one language, that every key a call site asks
+for is really in the table, and that no fact card is a thin summary in one language next to a paragraph in the other.
+
 ## Music
 
 Drop two tracks into `t/trung-thu-2026/audio/`:
 - `alley.mp3`: festive and drum-led, for the street and the parade;
 - `moon.mp3`: quiet, for the rooftop and the moon.
 
-Until then a generated placeholder plays. Effects are synthesized, among them the lion drum, the trống quân rope, knocks, the
-boat's putt-putt, the flame, chimes and crickets.
+Until then a generated placeholder plays: a four-bar pentatonic tune (điệu Bắc) over a moving bass root, with a trống
+lân pattern and a closing fill in the alley, and a breathy sáo voice over a drone on the moon. Effects are synthesized,
+among them the lion drum, the trống quân rope, knocks, the boat's putt-putt, the flame, chimes and crickets.
+
+The whole mix runs into a reverb built from a generated impulse and then a limiter, and effects are scattered across the
+stereo field so repeated pops and rustles don't stack up in the middle. The music is sent to the reverb more dryly than
+the effects, or the drums turn the alley to mud. The four knobs are at the top of `js/audio.js`: `VOL`, `TAIL`,
+`WET_MUSIC`, `WET_FX`. `node scripts/check-audio.mjs` runs the scheduler against a stubbed Web Audio API and checks that
+the notes land in time, in range, and across the stereo field.
 
 ## Files
 
@@ -170,6 +199,7 @@ boat's putt-putt, the flame, chimes and crickets.
 | `js/world.js` | Sky (dusk / space / bright) and the moon disc |
 | `js/street.js` | Shared materials and builders (merged buckets, tint, tapered tubes) |
 | `js/audio.js` | Music moods and synthesized effects |
+| `js/lang.js` | Every string the viewer reads, in Vietnamese and English |
 | `js/arch.js`, `js/tex.js`, `js/print.js`, `js/tween.js` | Same helpers as the Tết card |
 
 ## Sources

@@ -27,6 +27,7 @@ import { createMoonWorld, R as MR, EYE as MEYE, SPOTS, END } from './moonworld.j
 import { TABLE_TOP } from './roof.js';
 import { tickLanterns, lanternGlow } from './lanterns.js';
 import { createAudio } from './audio.js';
+import { t, lang, setLang, LANGS, verse } from './lang.js';
 import { createRig } from './rig.js';
 import { createUI } from './ui.js';
 import { glowScale } from './tex.js';
@@ -42,7 +43,7 @@ const headerEl = $('header'), nextBtn = $('next'), replayBtn = $('replay');
 // ---------- sound ----------
 const audio = createAudio();
 const muteBtn = $('mute');
-const showMute = () => { muteBtn.setAttribute('aria-pressed', audio.muted); muteBtn.setAttribute('aria-label', audio.muted ? 'Unmute sound' : 'Mute sound'); };
+const showMute = () => { muteBtn.setAttribute('aria-pressed', audio.muted); muteBtn.setAttribute('aria-label', t(audio.muted ? 'muteOff' : 'muteOn')); };
 muteBtn.onclick = () => { audio.setMuted(!audio.muted); showMute(); };
 showMute();
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -259,7 +260,7 @@ const ctx = { camera, rig, ui, audio, waitTap, play: animate, get held() { retur
 // walk({ point(u), heading(u), stops: [{ u, run }], speed, tick(u, dt) }) resolves at the end of the path.
 // The walk pauses at each stop until its run() resolves, then the viewer is set back on the path.
 const WALK = { u: 0, uTarget: 0, next: 0, active: false, cfg: null };
-function walkHint() { ui.hint('<span>↑</span>Swipe up to walk, down to step back · drag to look around'); }
+function walkHint() { ui.hint(t('walk')); }
 function walk(cfg) {
   Object.assign(WALK, { u: 0, uTarget: 0, next: 0, cfg, active: true });
   mode = 'walk';
@@ -328,7 +329,7 @@ async function takeLantern(st) {
 async function actStreet() {
   setOnly('street'); setLook('street');
   rig.set({ target: street.path.getPointAt(0), yaw: street.heading(0), pitch: 0.08, dist: 0.01 });
-  ui.title(`<p>Gửi ${esc(story.to)}</p><h2>${esc(story.title)}</h2>`, true);
+  ui.title(`<p>${t('startTo', esc(story.to))}</p><h2>${esc(story.title)}</h2>`, true);
   setTimeout(() => ui.title(null, false), 7000);
   await walk({
     point: (u) => street.path.getPointAt(u), heading: street.heading,
@@ -355,10 +356,10 @@ async function actRoof() {
   rig.set(roofPose(0.5));
   audio.setMood('alley', true);
   mode = 'orbit';
-  ui.title('<p>Sân thượng nhà mình</p><h2>Rằm tháng Tám</h2>', true);
+  ui.title(t('titleRoof'), true);
   await ui.fade(false, 1100);
   rig.fly(roofPose(0.15), 3);
-  ui.hint('<b>Bà:</b> “Cháu làm con chó bưởi cho bà nhé!”');
+  ui.hint(t('granDog'));
   await wait(3.2);
   ui.title(null, false);
   await makeDog();
@@ -367,12 +368,12 @@ async function actRoof() {
   await memoryLantern();
   await phaCo();
 }
-const POM_HINTS = ['<span>✋</span>Drag the knife onto the pomelo to score the peel<br><small>or tap the pomelo · drag elsewhere to look around</small>', '<span>✋</span>Drag a segment onto the melon and potato frame<br><small>each is pulled open into fluff and pinned with a toothpick</small>', '<span>✋</span>Drag a longan seed from the dish onto the dog’s face<br><small>two seeds for eyes, a triangle of melon for the nose</small>'];
+const POM_HINTS = ['pom1', 'pom2', 'pom3'];
 async function makeDog() {
   const bw = pomelo.group.getWorldPosition(new THREE.Vector3());
   await rig.fly({ target: bw.clone().add(new THREE.Vector3(0.12, 0.14, 0)), yaw: 0.2, pitch: -0.55, dist: fitDist(1.3, 1.1) }, 2.2);
   for (let step = 0; step < 3; step++) {
-    const { k0, carried } = await waitTap([pomelo.drops[step]], { hint: POM_HINTS[step], scrub: (k) => pomelo.set(step, k), carry: pomelo.tools[step] });
+    const { k0, carried } = await waitTap([pomelo.drops[step]], { hint: t(POM_HINTS[step]), scrub: (k) => pomelo.set(step, k), carry: pomelo.tools[step] });
     if (carried) pomelo.dropped(carried);
     ui.hint('');
     const dur = [2.2, 4.2, 2.0][step];
@@ -409,7 +410,7 @@ async function setTray() {
   const left = roof.slots.slice();
   left.forEach((s) => (s.spark.userData.on = true));
   while (left.length) {
-    const { hit } = await waitTap(left.map((s) => s.hit), { hint: `<span>✋</span>Tap a glowing spot to set the tray · ${roof.slots.length - left.length} / ${roof.slots.length}<br><small>Drag to walk round the family</small>` });
+    const { hit } = await waitTap(left.map((s) => s.hit), { hint: t('tray', roof.slots.length - left.length, roof.slots.length) });
     const s = hit ? left.find((x) => x.hit === hit) : left[0];
     left.splice(left.indexOf(s), 1);
     s.set = true; s.spark.material.opacity = 0;
@@ -417,7 +418,7 @@ async function setTray() {
     const y0 = s.item.position.y;
     audio.play('pop');
     await animate(0.7, (k) => { s.item.position.y = y0 + (1 - easeOutBounce(k)) * 0.4; });
-    ui.hint(s.line);
+    ui.hint(t(s.line));
     if (s.id === 'tiensi') await ui.fact('tiensi');
     else await wait(0.9);
   }
@@ -429,7 +430,7 @@ async function watchMoon() {
   // sit at the edge of the mat and watch it come up over the neighbours' roofs
   const from = new THREE.Vector3(-0.3, 0.05, -1).normalize(), to = new THREE.Vector3(-0.22, 0.36, -1).normalize();
   const yawOf = (d) => Math.atan2(-d.x, -d.z), pitchOf = (d) => Math.asin(d.y);
-  ui.hint('<b>Ông:</b> “Trăng lên rồi kìa!”');
+  ui.hint(t('moonUp'));
   rig.setLimits({ pitch: [-0.6, 1.2], dist: [0.01, 0.01] });
   await rig.fly({ target: roofW(0.1, 0.95, 1.4), yaw: yawOf(from), pitch: pitchOf(from) + 0.05, dist: 0.01 }, 2.4);
   mode = 'look';
@@ -439,10 +440,10 @@ async function watchMoon() {
     rig.goal.pitch = rig.cur.pitch = pitchOf(MOON_DIR) * 0.85 + 0.02;
     rig.goal.yaw = rig.cur.yaw = yawOf(MOON_DIR);
   });
-  await waitTap([moon.disc], { hint: '<span>✋</span>Tap the moon to read its colour, as farmers did<br><small>Drag to look around the rooftops</small>' });
+  await waitTap([moon.disc], { hint: t('moonTap') });
   const c0 = new THREE.Color(2.5, 2.35, 2.05), c1 = new THREE.Color(2.7, 2.2, 1.35);
   await animate(1.6, (k) => moon.tint(...c0.clone().lerp(c1, ease(k)).toArray()));
-  ui.hint('<b>Trăng vàng!</b> Năm nay được mùa tằm tơ.');
+  ui.hint(t('moonGold'));
   await ui.fact('moon');
   mode = 'orbit';
   rig.setLimits({ pitch: [-1.15, 0.35], dist: [1.0, 6.5] });
@@ -450,13 +451,13 @@ async function watchMoon() {
 async function memoryLantern() {
   const kw = keo.group.getWorldPosition(new THREE.Vector3());
   await rig.fly({ target: kw.clone().add(new THREE.Vector3(0, 0.45, 0)), yaw: 0.9, pitch: -0.15, dist: fitDist(2.2, 1.6) }, 2.4);
-  ui.hint('<b>Ông</b> thắp chiếc đèn kéo quân…');
+  ui.hint(t('keoLight'));
   audio.play('flame');
   await animate(2.5, (k) => { keo.lit = ease(k); dim = ease(k); });
   audio.setMood('moon', true);
   const N = story.memories.length;
   for (let i = 0; i < N; i++) {
-    await waitTap([keo.hit], { hint: `<span>✋</span>Tap the lantern: it turns to a memory · ${i} / ${N}<br><small>Drag to turn round: the shadows run along the walls</small>` });
+    await waitTap([keo.hit], { hint: t('keoTap', i, N) });
     ui.hint('');
     audio.play('paper');
     await keo.present(i, camera.position);
@@ -470,7 +471,7 @@ async function memoryLantern() {
 async function phaCo() {
   await rig.fly(roofPose(-0.2), 2.2);
   const trayHit = roof.slots.map((s) => s.item);
-  await waitTap(null, { hint: '<span>✋</span>Tap anywhere: <b>phá cỗ!</b><br><small>Eight o’clock, the moon is up</small>' });
+  await waitTap(null, { hint: t('phaCo') });
   audio.play('cymbal'); audio.play('drum');
   // everyone reaches in; the kids by the railing come running with their lanterns
   roof.family.forEach((p, i) => { const a0 = p.arms[1].sh.rotation.x; animate(0.8, (k) => (p.arms[1].sh.rotation.x = lerp(a0, -1.3, Math.sin(k * Math.PI)))); });
@@ -481,8 +482,8 @@ async function phaCo() {
     kid.g.rotation.y = Math.atan2(to.x - k0[i].x, to.z - k0[i].z);
     kid.tick(performance.now() / 1000, 1 - Math.abs(k - 0.5) * 0.4);
   }));
-  ui.hint('<b>Chị:</b> “Đi rước đèn thôi!”');
-  await ui.fact('letter', { button: 'Đi rước đèn' });
+  ui.hint(t('sisGo'));
+  await ui.fact('letter', { button: t('goParade') });
 }
 
 // yaw/pitch that look from the camera at a world point
@@ -502,7 +503,7 @@ async function actParade() {
   held.visible = true; held.userData.light.intensity = 1.6;
   rig.set({ target: DP(0), yaw: DH(0), pitch: 0.06, dist: 0.01 });
   audio.setMood('alley');
-  ui.title('<p>Rước đèn</p><h2>Tết của thiếu nhi</h2>', true);
+  ui.title(t('titleParade'), true);
   setTimeout(() => ui.title(null, false), 5000);
   await ui.fade(false, 1100);
   await walk({
@@ -519,7 +520,7 @@ async function carpStop() {
   const hang = dinh.carpKid.k.lantern.hang;
   await lookAt(hang.getWorldPosition(new THREE.Vector3()), 1.2);
   carpHit.position.copy(hang.getWorldPosition(new THREE.Vector3()));
-  await waitTap([carpHit], { hint: '<span>✋</span>Tap the carp lantern<br><small>Drag to look around the parade</small>' });
+  await waitTap([carpHit], { hint: t('carpTap') });
   audio.play('chime');
   await ui.fact('carp');
 }
@@ -540,7 +541,7 @@ async function lionDance() {
   audio.play('cymbal');
   const BEATS = 8;
   for (let i = 0; i < BEATS; i++) {
-    await waitTap([dinh.drumHit, L.hit], { hint: `<span>🥁</span>Tap the drum: the lion dances to your beat · ${i} / ${BEATS}<br><small>Drag to walk round the lion</small>` });
+    await waitTap([dinh.drumHit, L.hit], { hint: t('drumTap', i, BEATS) });
     audio.play('drum'); if (i % 4 === 3) audio.play('cymbal');
     s.drum = 1; s.dancing = true;
     const move = MOVES[i % MOVES.length];
@@ -548,7 +549,7 @@ async function lionDance() {
     s.dancing = false;
   }
   // the finale: lân ăn lộc, the lion reaches up for the red envelope and the lettuce
-  ui.hint('<b>Lân ăn lộc!</b>');
+  ui.hint(t('lionLoc'));
   const lionG = L.lion, p0 = lionG.position.clone(), r0 = lionG.rotation.y;
   const locLocal = dinh.loc.position.clone().sub(LION_AT); locLocal.y = 0;
   const reach = locLocal.clone().multiplyScalar(0.55);
@@ -576,9 +577,9 @@ async function trongQuan() {
   await rig.fly({ target: at.clone().add(new THREE.Vector3(0, 0.75, 0)), yaw: 0.15, pitch: -0.14, dist: fitDist(4.8, 3.6) }, 2.4);
   for (let i = 0; i < VERSE.length; i++) {
     const [who, line, en] = VERSE[i];
-    await waitTap([dinh.tqHit], { hint: i ? `<span>✋</span>Tap the rope again · ${i} / ${VERSE.length}<br><small>${who ? 'now she answers' : 'he sings on'}</small>` : '<span>✋</span>Tap the rope to strike the trống quân<br><small>thình thùng thình: each stroke brings a line of the song</small>' });
+    await waitTap([dinh.tqHit], { hint: i ? t('ropeAgain', i, VERSE.length, who) : t('ropeFirst') });
     [0, 0.26, 0.52].forEach((d, k) => setTimeout(() => { dinh.strike(who); audio.play('thung', k === 1 ? 0.8 : 1); }, d * 1000));
-    ui.hint(`<b>${who ? 'Cô gái' : 'Chàng trai'}:</b> “${line}”<br><small>${en}</small>`);
+    ui.hint(`<b>${t(who ? 'singerHer' : 'singerHim')}:</b> ${verse(`“${line}”`, en)}`);
     await wait(2.2);
   }
   await ui.fact('trongquan');
@@ -586,9 +587,9 @@ async function trongQuan() {
 async function storyteller() {
   const tw = dinh.teller.g.getWorldPosition(new THREE.Vector3());
   await rig.fly({ target: tw.clone().add(new THREE.Vector3(0.3, 0.8, 0)), yaw: 1.3, pitch: -0.12, dist: fitDist(2.8, 2.2) }, 2.4);
-  await waitTap([dinh.tellerHit], { hint: '<span>✋</span>Sit with the children: tap the old storyteller<br><small>Drag to look round the yard</small>' });
-  await ui.fact('ruocden', { button: 'Nghe tiếp' });
-  ui.hint('<b>Ông:</b> “Pháp sư ném cây gậy lên trời, gậy hóa thành một chiếc cầu bạc…”');
+  await waitTap([dinh.tellerHit], { hint: t('tellerTap') });
+  await ui.fact('ruocden', { button: t('listenOn') });
+  ui.hint(t('tellerBridge'));
   // the staff flies up and becomes a bridge of moonlight
   const staff = dinh.staff, from = staff.getWorldPosition(new THREE.Vector3());
   scene.attach(staff);
@@ -617,7 +618,7 @@ async function storyteller() {
     tick: (u) => { moon.group.scale.setScalar(1 + u * u * 7); sky.dusk = LOOKS.dinh.dusk * (1 - u); sky.space = u * 0.8; scene.fog.density = LOOKS.dinh.fog[1] * (1 - u * 0.8); },
     stops: [],
   });
-  ui.hint('<span>↑</span>Keep climbing the bridge of moonlight…');
+  ui.hint(t('climb'));
   WALK.cfg = null;
   await ui.fade(true, 1400, '#fffdf4');
 }
@@ -631,7 +632,7 @@ async function actMoon() {
   held.visible = true;
   rig.set({ target: MTOP, yaw: 0, pitch: 0.05, dist: 0.01 });
   audio.setMood('moon');
-  ui.title('<p>Cung trăng</p><h2>Nơi chú Cuội ngồi gốc cây đa</h2>', true);
+  ui.title(t('titleMoon'), true);
   await ui.fade(false, 1600, '#fffdf4');
   setTimeout(() => ui.title(null, false), 5000);
   await walk({
@@ -649,7 +650,7 @@ async function boardStop(id) {
   mode = 'look';
   const bd = moonW.boards[id];
   await lookAt(bd.art.getWorldPosition(new THREE.Vector3()), 1.4);
-  await waitTap([bd.hit], { hint: '<span>✋</span>Tap the painting to hear this part of the story<br><small>Drag to look around the moon</small>' });
+  await waitTap([bd.hit], { hint: t('boardTap') });
   audio.play('paper');
   const m = bd.art.material;
   await animate(0.8, (k) => (m.emissiveIntensity = 0.35 + Math.sin(k * Math.PI) * 0.5));
@@ -658,30 +659,30 @@ async function boardStop(id) {
 async function hangStop() {
   mode = 'look';
   await lookAt(moonW.hang.g.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.6, 1.1, 0)), 1.4);
-  await waitTap([moonW.rabbitHit], { hint: '<span>✋</span>Tap the jade rabbit<br><small>Drag to look at the palace</small>' });
+  await waitTap([moonW.rabbitHit], { hint: t('rabbitTap') });
   moonW.pound = 2.4;
   for (let i = 0; i < 6; i++) setTimeout(() => audio.play('knock'), i * 350);
-  ui.hint('<b>Thỏ Ngọc</b> giã thuốc trường sinh: cộc, cộc, cộc…');
+  ui.hint(t('rabbitPound'));
   await wait(2.4);
-  await waitTap([moonW.hangHit], { hint: '<span>✋</span>Tap chị Hằng' });
+  await waitTap([moonW.hangHit], { hint: t('hangTap') });
   audio.play('chime');
   await ui.fact('hang');
 }
 async function danceStop() {
   mode = 'look';
   await lookAt(moonW.dance.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.9, 0)), 1.4);
-  await waitTap([moonW.danceHit], { hint: '<span>✋</span>Tap the dancers<br><small>Drag to look around</small>' });
+  await waitTap([moonW.danceHit], { hint: t('danceTap') });
   moonW.spin = 5; audio.play('chime'); audio.play('bell');
-  ui.hint('<b>Khúc Nghê Thường</b>: the fairies whirl faster…');
+  ui.hint(t('dance'));
   await wait(1.5);
   await ui.fact('nghethuong');
 }
 async function cuoiStop() {
   mode = 'look';
   await lookAt(moonW.cuoiG.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.8, 0)), 1.6);
-  await waitTap([moonW.cuoiHit], { hint: '<span>✋</span>Tap chú Cuội, sitting under his banyan<br><small>Drag to look up at the tree</small>' });
+  await waitTap([moonW.cuoiHit], { hint: t('cuoiTap') });
   audio.play('chime');
-  await ui.fact('cuoi4', { button: 'Chào chú Cuội' });
+  await ui.fact('cuoi4', { button: t('greetCuoi') });
 }
 
 // ---------- act 5: a leaf falls home ----------
@@ -690,7 +691,7 @@ async function ending() {
   const leaf = moonW.leaf;
   const cw = moonW.cuoiG.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 1.1, 0));
   leaf.position.copy(cw); leaf.visible = true;
-  ui.hint('<b>Chú Cuội:</b> “Mỗi năm cây đa rụng một chiếc lá. Chiếc lá năm nay, chú gửi về nhà cháu.”');
+  ui.hint(t('cuoiLeaf'));
   audio.play('chime');
   const hover = camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()), 1.3).add(new THREE.Vector3(0, 0.1, 0));
   await animate(2.2, (k) => { const e = ease(k); leaf.position.lerpVectors(cw, hover, e); leaf.rotation.set(Math.sin(k * 6) * 0.4, k * 3, Math.sin(k * 4) * 0.3); });
@@ -721,7 +722,7 @@ async function ending() {
   audio.play('bell');
   await animate(3.5, (k) => { const e = ease(k); trayLeaf.position.set(land.x + Math.sin(k * 7) * 0.3 * (1 - k), lerp(2.6, land.y, e), land.z); trayLeaf.rotation.set(-Math.PI / 2 * e + Math.sin(k * 9) * 0.5 * (1 - k), k * 4, 0); });
   audio.play('chime');
-  ui.hint('<small>Drag to look around · the moon is up</small>');
+  ui.hint(t('lookMoon'));
   await ui.message({ to: story.to, from: story.from, message: story.message });
   replayBtn.hidden = false;
   document.body.classList.add('nav');
@@ -732,26 +733,32 @@ function escapeHtmlLocal(s) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;
 const esc = escapeHtmlLocal;
 const START = new URLSearchParams(location.search).get('act'); // ?act=street|roof|parade|moon skips the start screen
 const ACTS = [
-  ['street', actStreet, 'Phố Hàng Mã', 'Làm đèn ông sao, nặn tò he, chọn mặt nạ'],
-  ['roof', actRoof, 'Sân thượng', 'Chó bưởi, mâm cỗ, ngắm trăng, đèn kéo quân'],
-  ['parade', actParade, 'Rước đèn về sân đình', 'Đèn cá chép, múa lân, nghe kể chuyện'],
-  ['moon', actMoon, 'Cung trăng', 'Chú Cuội, chị Hằng, Thỏ Ngọc'],
+  ['street', actStreet, 'actStreet'],
+  ['roof', actRoof, 'actRoof'],
+  ['parade', actParade, 'actParade'],
+  ['moon', actMoon, 'actMoon'],
 ];
 // Start screen: begin from the start, or open the chain of chapter cards and pick one. Resolves the chapter index.
 function chooseStart() {
   const el = $('start');
-  el.innerHTML = `<div class="pane home"><p class="sub">Gửi ${esc(story.to)}</p><h2>${esc(story.title)}</h2>
-      <button type="button" class="big primary" data-act="0">Bắt đầu từ đầu</button>
-      <button type="button" class="big" data-go="map">Chọn chương</button></div>
-    <div class="pane map"><p class="sub">Chọn chương</p>
-      <ol class="chain">${ACTS.map(([, , name, what], i) => `<li><button type="button" data-act="${i}"><span class="n">Chương ${i + 1}</span><b>${name}</b><small>${what}</small></button></li>`).join('')}</ol>
-      <button type="button" data-go="home">← Quay lại</button></div>`;
+  const draw = () => {
+    el.innerHTML = `<div class="pane home"><p class="sub">${t('startTo', esc(story.to))}</p><h2>${esc(story.title)}</h2>
+      <button type="button" class="big primary" data-act="0">${t('btnBegin')}</button>
+      <button type="button" class="big" data-go="map">${t('btnChapters')}</button>
+      <p class="langs">${Object.entries(LANGS).map(([k, name]) => `<button type="button" class="lang" data-lang="${k}"${k === lang ? ' aria-current="true"' : ''}>${esc(name)}</button>`).join('')}</p></div>
+    <div class="pane map"><p class="sub">${t('btnChapters')}</p>
+      <ol class="chain">${ACTS.map(([, , key], i) => `<li><button type="button" data-act="${i}"><span class="n">${t('chapterN', i + 1)}</span><b>${t(key)}</b><small>${t(key + 'What')}</small></button></li>`).join('')}</ol>
+      <button type="button" data-go="home">${t('btnBack')}</button></div>`;
+  };
+  draw();
   el.hidden = false;
   setTimeout(() => el.querySelector('.primary').focus({ preventScroll: true }), 50);
   return new Promise((res) => {
     el.onclick = (e) => {
       const b = e.target.closest('button');
       if (!b) return;
+      // the language pills redraw this screen in the other language, keeping whichever pane is open
+      if (b.dataset.lang) { const onMap = el.classList.contains('map'); setLang(b.dataset.lang); applyChrome(); draw(); el.classList.toggle('map', onMap); el.querySelector('.lang[aria-current]').focus({ preventScroll: true }); return; }
       if (b.dataset.go) { el.classList.toggle('map', b.dataset.go === 'map'); el.querySelector(b.dataset.go === 'map' ? '.chain button' : '.primary').focus({ preventScroll: true }); return; }
       el.classList.add('done');
       setTimeout(() => el.remove(), 800);
@@ -759,7 +766,17 @@ function chooseStart() {
     };
   });
 }
+// The page chrome outside the 3D scene: header, nav buttons, the labels screen readers read.
+function applyChrome() {
+  document.documentElement.lang = lang;
+  headerEl.innerHTML = `<h1>${t('headerTitle')}</h1><p>${t('headerSub')}</p>`;
+  nextBtn.textContent = t('btnNext');
+  replayBtn.textContent = t('btnReplay');
+  canvas.setAttribute('aria-label', t('sceneLabel'));
+  showMute();
+}
 async function run() {
+  applyChrome();
   const from = START ? Math.max(0, ACTS.findIndex(([id]) => id === START)) : await chooseStart();
   for (let i = from; i < ACTS.length; i++) await ACTS[i][1]();
   await ending();
@@ -859,7 +876,7 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   idle = 0;
-  if (mode === 'walk') WALK.uTarget += e.deltaY * 0.0004;
+  if (mode === 'walk') WALK.uTarget -= e.deltaY * 0.0004; // scrolling up is deltaY < 0, and walks you forward
   else rig.zoom(1 + THREE.MathUtils.clamp(e.deltaY, -100, 100) * 0.0012);
 }, { passive: false });
 canvas.addEventListener('keydown', (e) => {

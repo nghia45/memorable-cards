@@ -2,6 +2,7 @@
 // of its shop (local +z faces the street) with an artisan behind the table, and an async run(ctx) that walks the
 // viewer through its steps: ctx.waitTap(targets, { hint, scrub }) waits for a tap (or a drag that scrubs the
 // step), ctx.play(dur, fn) animates it. When run() resolves the director shows the stop's fact card.
+import { t } from './lang.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTex, glowTex } from './print.js';
@@ -224,11 +225,7 @@ function starStop(audio) {
   g.add(hit);
   const set = (step, k) => { if (step === 0) sticks.forEach((st) => (st.m.visible = true)); star.set(step, k); };
 
-  const HINTS = [
-    '<span>✋</span>Drag the split bamboo up to the front of the table to tie two stars<br><small>or tap it · drag elsewhere to look around</small>',
-    '<span>✋</span>Drag the red or green cellophane onto the frame: the facets go on red and green in turn<br><small>or tap it</small>',
-    '<span>✋</span>Drag the candle into the lantern: tinsel ring and handle on, and light it<br><small>or tap it</small>',
-  ];
+  const HINTS = ['star1', 'star2', 'star3'];
   const STUFF = [[bundle], [sheets[0], sheets[2]], [spare]];
   const DUR = [2.4, 2.6, 2.0];
   return {
@@ -236,7 +233,7 @@ function starStop(audio) {
     pose: { target: new THREE.Vector3(0, TABLE_H + 0.2, 0.05), pitch: -0.4, dist: 1.3 }, // the bamboo and cellophane in view
     async run(ctx) {
       for (let s = 0; s < 3; s++) {
-        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], carry: STUFF[s], back: true });
+        const { k0 } = await ctx.waitTap([hit], { hint: t(HINTS[s]), carry: STUFF[s], back: true });
         if (s === 1) sheets[0].visible = sheets[2].visible = false; // they went on the lantern
         if (s === 2) spare.visible = false;
         let done = 0;
@@ -319,12 +316,7 @@ function toheStop(audio) {
     if (step === 2) tail.forEach((p, i) => p.scale.setScalar(Math.max(0.001, easeOut(cl(k, i * 0.12, i * 0.12 + 0.45)))));
     if (step === 3) { wings.forEach((w) => w.scale.setScalar(Math.max(0.001, easeOut(cl(k, 0, 0.6))))); eyes.forEach((e) => e.scale.setScalar(Math.max(0.001, easeOut(cl(k, 0.5, 1))))); }
   }
-  const HINTS = [
-    '<span>✋</span>Drag a lump of yellow dough onto the stick for the body<br><small>or tap it · drag elsewhere to look around</small>',
-    '<span>✋</span>Drag the orange dough on for the head, the red comb and the beak',
-    '<span>✋</span>Drag the green dough on to fan out the tail feathers',
-    '<span>✋</span>Drag the red dough on for the wings and the eyes',
-  ];
+  const HINTS = ['tohe1', 'tohe2', 'tohe3', 'tohe4'];
   const LUMP = [0, 6, 2, 1]; // which compartment each step takes from
   let working = 0;
   return {
@@ -332,7 +324,7 @@ function toheStop(audio) {
     pose: { target: new THREE.Vector3(-0.02, 0.86, 0.05), pitch: -0.42, dist: 1.0 }, // the dough box in view below the figure
     async run(ctx) {
       for (let s = 0; s < 4; s++) {
-        const { k0 } = await ctx.waitTap([hit], { hint: HINTS[s], carry: [lumps[LUMP[s]]], back: true });
+        const { k0 } = await ctx.waitTap([hit], { hint: t(HINTS[s]), carry: [lumps[LUMP[s]]], back: true });
         working = 1;
         await ctx.play(1.6 * (1 - k0), (k) => set(s, lerp(k0, 1, k)));
         audio.play('pop');
@@ -352,7 +344,7 @@ function toheStop(audio) {
 // ======================= 3. mặt nạ giấy bồi: try one on =======================
 // Faces painted on 512² canvases; eyes = normalised eye-hole centres for the full-screen overlay.
 const MASKS = [
-  { id: 'ongdia', name: 'Ông Địa', line: 'Ông Địa bụng to, cười hề hề, dẫn đường cho đoàn lân: đất đai phì nhiêu, mùa màng no đủ.', eyes: [[0.36, 0.44], [0.64, 0.44]], paint(x, S) {
+  { id: 'ongdia', name: 'Ông Địa', key: 'maskOngdia', eyes: [[0.36, 0.44], [0.64, 0.44]], paint(x, S) {
     x.fillStyle = '#f5c89c'; x.beginPath(); x.ellipse(S / 2, S / 2, S * 0.46, S * 0.48, 0, 0, 7); x.fill();
     x.fillStyle = 'rgba(240,110,110,.6)'; for (const s of [-1, 1]) { x.beginPath(); x.ellipse(S / 2 + s * 150, S * 0.6, 55, 36, 0, 0, 7); x.fill(); }
     x.strokeStyle = '#3a2210'; x.lineWidth = 12; x.lineCap = 'round';
@@ -361,7 +353,7 @@ const MASKS = [
     x.fillStyle = '#fff'; x.fillRect(S / 2 - 110, S * 0.64, 220, 22);
     x.fillStyle = '#e8a07a'; x.beginPath(); x.ellipse(S / 2, S * 0.55, 40, 30, 0, 0, 7); x.fill();
   } },
-  { id: 'khi', name: 'Tôn Ngộ Không', line: 'Tôn Ngộ Không, Tề Thiên Đại Thánh trong Tây Du Ký: lanh lợi, gan dạ, cầm gậy như ý.', eyes: [[0.36, 0.45], [0.64, 0.45]], paint(x, S) {
+  { id: 'khi', name: 'Tôn Ngộ Không', key: 'maskKhi', eyes: [[0.36, 0.45], [0.64, 0.45]], paint(x, S) {
     x.fillStyle = '#c8322a'; x.beginPath(); x.ellipse(S / 2, S / 2, S * 0.45, S * 0.48, 0, 0, 7); x.fill();
     x.fillStyle = '#f7d7a8'; x.beginPath(); x.moveTo(S / 2, S * 0.3); x.bezierCurveTo(S * 0.05, S * 0.15, S * 0.1, S * 0.85, S / 2, S * 0.92); x.bezierCurveTo(S * 0.9, S * 0.85, S * 0.95, S * 0.15, S / 2, S * 0.3); x.fill();
     x.fillStyle = '#e8b030'; x.fillRect(S * 0.1, S * 0.14, S * 0.8, 36); x.strokeStyle = '#8a5a10'; x.lineWidth = 4; x.strokeRect(S * 0.1, S * 0.14, S * 0.8, 36);
@@ -370,7 +362,7 @@ const MASKS = [
     x.fillStyle = '#3a1a10'; x.beginPath(); x.ellipse(S / 2 - 18, S * 0.62, 10, 7, 0, 0, 7); x.ellipse(S / 2 + 18, S * 0.62, 10, 7, 0, 0, 7); x.fill();
     x.strokeStyle = '#7a1a1a'; x.lineWidth = 10; x.beginPath(); x.arc(S / 2, S * 0.68, 60, 0.3, Math.PI - 0.3); x.stroke();
   } },
-  { id: 'heo', name: 'Trư Bát Giới', line: 'Trư Bát Giới, sư đệ của Ngộ Không: tham ăn, hay ngủ mà rất vui tính.', eyes: [[0.35, 0.4], [0.65, 0.4]], paint(x, S) {
+  { id: 'heo', name: 'Trư Bát Giới', key: 'maskHeo', eyes: [[0.35, 0.4], [0.65, 0.4]], paint(x, S) {
     x.fillStyle = '#f2a8b0'; x.beginPath(); x.ellipse(S / 2, S / 2, S * 0.47, S * 0.46, 0, 0, 7); x.fill();
     for (const s of [-1, 1]) { x.beginPath(); x.moveTo(S / 2 + s * 120, S * 0.14); x.lineTo(S / 2 + s * 230, S * 0.02); x.lineTo(S / 2 + s * 210, S * 0.28); x.fill(); }
     x.fillStyle = '#e88a98'; x.beginPath(); x.ellipse(S / 2, S * 0.62, 90, 66, 0, 0, 7); x.fill();
@@ -378,7 +370,7 @@ const MASKS = [
     x.strokeStyle = '#3a1a1a'; x.lineWidth = 10; for (const s of [-1, 1]) { x.beginPath(); x.moveTo(S / 2 + s * 40, S * 0.28); x.lineTo(S / 2 + s * 150, S * 0.3); x.stroke(); }
     x.strokeStyle = '#7a1a1a'; x.lineWidth = 9; x.beginPath(); x.arc(S / 2, S * 0.76, 70, 0.4, Math.PI - 0.4); x.stroke();
   } },
-  { id: 'tho', name: 'Thỏ Ngọc', line: 'Thỏ Ngọc, người bạn của chị Hằng, ngày đêm giã thuốc trên cung trăng.', eyes: [[0.37, 0.52], [0.63, 0.52]], paint(x, S) {
+  { id: 'tho', name: 'Thỏ Ngọc', key: 'maskTho', eyes: [[0.37, 0.52], [0.63, 0.52]], paint(x, S) {
     x.fillStyle = '#fbf6ee';
     for (const s of [-1, 1]) { x.beginPath(); x.ellipse(S / 2 + s * 80, S * 0.16, 44, 120, s * 0.15, 0, 7); x.fill(); }
     x.beginPath(); x.ellipse(S / 2, S * 0.58, S * 0.42, S * 0.4, 0, 0, 7); x.fill();
@@ -429,7 +421,7 @@ function maskStop(audio) {
     async run(ctx) {
       let tried = 0;
       for (;;) {
-        const { hit } = await ctx.waitTap(all, { hint: tried ? '<span>✋</span>Try another mask<br><small>or tap Continue when you’re done</small>' : '<span>✋</span>Tap a mask to try it on<br><small>Drag to look around</small>', next: tried > 0 });
+        const { hit } = await ctx.waitTap(all, { hint: t(tried ? 'maskMore' : 'maskFirst'), next: tried > 0 });
         if (!hit) break; // Continue
         const m = masks[hit.userData.mask], mesh = hit, home = mesh.position.clone(), s0 = mesh.scale.x;
         glowM.visible = false;
@@ -445,7 +437,7 @@ function maskStop(audio) {
         });
         mesh.visible = false;
         ctx.ui.mask(m.canvas, m.eyes);
-        ctx.ui.hint(`<b>${m.name}</b><br><small>${m.line}</small><br><small>Tap to take the mask off</small>`);
+        ctx.ui.hint(t('maskWorn', m.name, t(m.key)));
         await ctx.waitTap(null, {});
         ctx.ui.mask(null);
         mesh.visible = true;
@@ -555,18 +547,14 @@ function cakeStop(audio) {
       stoveLight.intensity = 0.4 + Math.sin(b * Math.PI) * 1.2;
     }
   }
-  const HINTS = [
-    '<span>✋</span>Drag the ball of dough into the carved mould<br><small>or tap it · drag elsewhere to look around</small>',
-    '<span>✋</span>Pick up the mould and knock it on the table to turn the cake out<br><small>or tap it</small>',
-    '<span>✋</span>Drag the cake onto the charcoal to bake it golden<br><small>or tap it</small>',
-  ];
+  const HINTS = ['cake1', 'cake2', 'cake3'];
   return {
     id: 'cake', group: g, maker: baker,
     pose: { target: new THREE.Vector3(0.05, Y + 0.05, 0.05), pitch: -0.6, dist: 1.0 },
     async run(ctx) {
       const D = [1.8, 2.4, 3.2];
       for (let s = 0; s < 3; s++) {
-        const { k0 } = await ctx.waitTap([[mouldHit, hit, stoveHit][s]], { hint: HINTS[s], carry: [[ball, block, cake][s]], });
+        const { k0 } = await ctx.waitTap([[mouldHit, hit, stoveHit][s]], { hint: t(HINTS[s]), carry: [[ball, block, cake][s]], });
         knocks = 0;
         if (s === 0) ballFrom.copy(ball.position);
         if (s === 2) cakeFrom.copy(cake.position);
@@ -639,26 +627,23 @@ function boatStop(audio) {
   const rings = Array.from({ length: 10 }, () => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0, depthWrite: false })); m.position.y = stoolTop + 0.102; g.add(m); return { m, t: 9 }; });
   const puffs = Array.from({ length: 8 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x9aa0a8, transparent: true, opacity: 0, depthWrite: false })); g.add(s); return { s, t: 9 }; });
   let running = 0, ang = 0, lastPutt = 0, ri = 0, pi = 0;
-  const HINTS = [
-    '<span>✋</span>Drag the lit candle into the boat, under its boiler<br><small>or tap the boat · drag elsewhere to look around</small>',
-    '<span>✋</span>Drag the boat onto the water<br><small>or tap it</small>',
-  ];
+  const HINTS = ['boat1', 'boat2'];
   return {
     id: 'boat', group: g, maker: seller,
     pose: { target: new THREE.Vector3(0.1, stoolTop + 0.1, 0.05), pitch: -0.7, dist: 1.25 },
     async run(ctx) {
-      await ctx.waitTap([hull], { hint: HINTS[0], carry: [saucer, stub] });
+      await ctx.waitTap([hull], { hint: t(HINTS[0]), carry: [saucer, stub] });
       candle.visible = false;
       audio.play('flame');
       await ctx.play(0.8, (k) => (lamp.material.opacity = k));
-      await ctx.waitTap([water], { hint: HINTS[1], carry: [hull] });
+      await ctx.waitTap([water], { hint: t(HINTS[1]), carry: [hull] });
       const p0 = boat.position.clone(), r0 = boat.rotation.y;
       const p1 = new THREE.Vector3(0.2, stoolTop + 0.1, 0);
       await ctx.play(1.2, (k) => { const e = ease(k); boat.position.lerpVectors(p0, p1, e); boat.position.y += Math.sin(e * Math.PI) * 0.1; boat.rotation.y = lerp(r0, Math.PI, e); });
       audio.play('pop');
       await ctx.play(1.0, () => {});
       running = 1;
-      ctx.ui.hint('<small>Tạch tạch tạch… Listen to it go</small>');
+      ctx.ui.hint(t('boatGo'));
       await ctx.play(5, () => {});
     },
     tick(t, dt) {
