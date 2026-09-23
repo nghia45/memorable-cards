@@ -17,7 +17,8 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { stepTweens, animate, wait, ease, easeOut, lerp } from './tween.js';
 import { createSky, createMoon, MOON_DIR } from './world.js';
 import { streetMaterials } from './street.js';
-import { createHangMa, STOPS, FACADE, EYE } from './hangma.js';
+import { createHangMa, STOPS, NOOKS, FACADE, EYE } from './hangma.js';
+import { createFakerCorner, createTraDa } from './extras.js';
 import { createStops, finishedStar } from './stops.js';
 import { createRooftop } from './roof.js';
 import { createPomelo } from './pomelo.js';
@@ -27,7 +28,7 @@ import { createMoonWorld, R as MR, EYE as MEYE, SPOTS, END } from './moonworld.j
 import { TABLE_TOP } from './roof.js';
 import { tickLanterns, lanternGlow } from './lanterns.js';
 import { createAudio } from './audio.js';
-import { t, lang, setLang, LANGS, verse } from './lang.js';
+import { t, label, lang, setLang, LANGS, verse } from './lang.js';
 import { createRig } from './rig.js';
 import { createUI } from './ui.js';
 import { glowScale } from './tex.js';
@@ -181,6 +182,16 @@ progress(0.8, 'Hanging the lanterns');
 await breathe();
 const stops = createStops(STOPS, FACADE, audio);
 stops.forEach((s) => street.group.add(s.group));
+// the two jokes on the street (extras.js): tapped in passing, the walk doesn't stop for them. Their lines go in
+// the hint, and only while you're still walking, so they never talk over a stall.
+const say = (html) => { if (mode !== 'walk' || pending || !street.group.visible) return; if (html) ui.hint(html); else walkHint(); };
+const fk = street.faker, inX = fk.x - 1.15; // 1.15 m into his shop, the TV beside him toward the street's start
+const nooks = [
+  Object.assign(createFakerCorner({ at: new THREE.Vector3(inX, 0.13, fk.z - 0.25), tvAt: new THREE.Vector3(inX, 0.13, fk.z + 0.7), face: Math.PI / 2,
+    room: { x: fk.x - 0.5 - 1.0, z: fk.z, depth: 2.0, w: fk.w - 0.64 }, audio, say }), { id: 'faker', reach: 8 }),
+  Object.assign(createTraDa({ at: new THREE.Vector3(FACADE - 0.95, 0.15, NOOKS[0].z), turn: -Math.PI / 2, audio, say }), { id: 'tra', reach: 5 }), // right by the path: from farther off, just walking at it would wake it
+];
+nooks.forEach((n) => street.group.add(n.group));
 
 // ---------- act 2 set: the rooftop, far from the street (only one set is visible at a time) ----------
 const ROOF_AT = new THREE.Vector3(300, 0, 0);
@@ -262,7 +273,7 @@ const ctx = { camera, rig, ui, audio, waitTap, play: animate, get held() { retur
 const WALK = { u: 0, uTarget: 0, next: 0, active: false, cfg: null };
 function walkHint() { ui.hint(t('walk')); }
 function walk(cfg) {
-  Object.assign(WALK, { u: 0, uTarget: 0, next: 0, cfg, active: true });
+  Object.assign(WALK, { u: 0, uTarget: 0, next: 0, cfg, active: true, aside: false });
   mode = 'walk';
   rig.setLimits({ pitch: [-0.5, 0.9], dist: [0.01, 0.01] });
   walkHint();
@@ -273,18 +284,19 @@ async function resumeWalk() {
   rig.setLimits({ pitch: [-0.5, 0.9], dist: [0.01, 0.01] });
   await rig.fly({ target: c.point(u), yaw: c.heading(u), pitch: 0.06, dist: 0.01 }, 1.5);
   mode = 'walk'; idle = 0; walkHint();
-  WALK.active = true;
+  WALK.active = true; WALK.aside = false;
 }
 function tickWalk(dt) {
   const c = WALK.cfg;
   if (c?.tick) c.tick(WALK.u, dt);
   if (!WALK.active) return;
   const cap = WALK.next < c.stops.length ? c.stops[WALK.next].u : 1;
-  if (idle > 2.5) WALK.uTarget += dt * (c.speed || 0.016);
+  // looking off to the side (turned there with a drag or the arrow keys) holds the walk until you walk yourself
+  if (idle > 2.5 && !WALK.aside) WALK.uTarget += dt * (c.speed || 0.016);
   WALK.uTarget = THREE.MathUtils.clamp(WALK.uTarget, 0, cap);
   WALK.u += (WALK.uTarget - WALK.u) * Math.min(1, dt * 1.6);
   rig.goal.target.copy(c.point(Math.min(WALK.u, 1)));
-  if (idle > 3) {
+  if (idle > 3 && !WALK.aside) {
     rig.goal.yaw += wrapAngle(c.heading(WALK.u) - rig.goal.yaw) * Math.min(1, dt * 0.8);
     rig.goal.pitch += ((c.pitch ?? 0.06) - rig.goal.pitch) * Math.min(1, dt * 0.8);
   }
@@ -328,6 +340,7 @@ async function takeLantern(st) {
 }
 async function actStreet() {
   setOnly('street'); setLook('street');
+  audio.setMood('street');
   rig.set({ target: street.path.getPointAt(0), yaw: street.heading(0), pitch: 0.08, dist: 0.01 });
   ui.title(`<p>${t('startTo', esc(story.to))}</p><h2>${esc(story.title)}</h2>`, true);
   setTimeout(() => ui.title(null, false), 7000);
@@ -335,6 +348,22 @@ async function actStreet() {
     point: (u) => street.path.getPointAt(u), heading: street.heading,
     stops: stops.map((st) => ({ u: street.zToU(st.z + 1.2), run: () => visitStop(st) })),
   });
+}
+
+// A nook wakes up (its hint shows, a tap on it works) only when you turn to look at it: the TV man in his shop,
+// the uncle at the tea stall. They're there for those who look. Otherwise it's the walking hint.
+const look = new THREE.Vector3();
+function nearNooks() {
+  if (mode !== 'walk' || pending) return;
+  const c = camera.position;
+  camera.getWorldDirection(look);
+  for (const n of nooks) {
+    const dx = n.where.x - c.x, dz = n.where.z - c.z, d = Math.hypot(dx, dz);
+    const on = d < n.reach && (look.x * dx + look.z * dz) / (Math.hypot(look.x, look.z) * d || 1) > 0.93;
+    if (on && !n.on) ui.hint(t(n.id === 'faker' ? 'fakerNear' : 'traNear'));
+    else if (!on && n.on && !n.busy) walkHint();
+    n.on = on;
+  }
 }
 
 // ---------- act 2: the rooftop ----------
@@ -354,7 +383,7 @@ async function actRoof() {
   held.visible = false; held.userData.light.intensity = 0;
   rig.setLimits({ pitch: [-1.15, 0.35], dist: [1.0, 6.5] });
   rig.set(roofPose(0.5));
-  audio.setMood('alley', true);
+  audio.setMood('roof', true);
   mode = 'orbit';
   ui.title(t('titleRoof'), true);
   await ui.fade(false, 1100);
@@ -420,11 +449,13 @@ async function setTray() {
     await animate(0.7, (k) => { s.item.position.y = y0 + (1 - easeOutBounce(k)) * 0.4; });
     ui.hint(t(s.line));
     if (s.id === 'tiensi') await ui.fact('tiensi');
-    else await wait(0.9);
+    else { await Promise.race([wait(readFor(t(s.line))), waitTap(null)]); resolvePending(); } // time to read it, or tap on
   }
   audio.play('chime');
   await ui.fact('tray');
 }
+// seconds to read a line at an easy pace, markup aside: long enough for "both", which says it twice
+const readFor = (html) => THREE.MathUtils.clamp(1.2 + html.replace(/<[^>]*>/g, '').length / 16, 3, 9);
 const easeOutBounce = (k) => { const n = 7.5625, d = 2.75; if (k < 1 / d) return n * k * k; if (k < 2 / d) return n * (k -= 1.5 / d) * k + 0.75; if (k < 2.5 / d) return n * (k -= 2.25 / d) * k + 0.9375; return n * (k -= 2.625 / d) * k + 0.984375; };
 async function watchMoon() {
   // sit at the edge of the mat and watch it come up over the neighbours' roofs
@@ -454,7 +485,6 @@ async function memoryLantern() {
   ui.hint(t('keoLight'));
   audio.play('flame');
   await animate(2.5, (k) => { keo.lit = ease(k); dim = ease(k); });
-  audio.setMood('moon', true);
   const N = story.memories.length;
   for (let i = 0; i < N; i++) {
     await waitTap([keo.hit], { hint: t('keoTap', i, N) });
@@ -483,7 +513,7 @@ async function phaCo() {
     kid.tick(performance.now() / 1000, 1 - Math.abs(k - 0.5) * 0.4);
   }));
   ui.hint(t('sisGo'));
-  await ui.fact('letter', { button: t('goParade') });
+  await ui.fact('letter', { button: label('goParade') });
 }
 
 // yaw/pitch that look from the camera at a world point
@@ -502,7 +532,7 @@ async function actParade() {
   setOnly('dinh'); setLook('dinh');
   held.visible = true; held.userData.light.intensity = 1.6;
   rig.set({ target: DP(0), yaw: DH(0), pitch: 0.06, dist: 0.01 });
-  audio.setMood('alley');
+  audio.setMood('parade');
   ui.title(t('titleParade'), true);
   setTimeout(() => ui.title(null, false), 5000);
   await ui.fade(false, 1100);
@@ -588,7 +618,7 @@ async function storyteller() {
   const tw = dinh.teller.g.getWorldPosition(new THREE.Vector3());
   await rig.fly({ target: tw.clone().add(new THREE.Vector3(0.3, 0.8, 0)), yaw: 1.3, pitch: -0.12, dist: fitDist(2.8, 2.2) }, 2.4);
   await waitTap([dinh.tellerHit], { hint: t('tellerTap') });
-  await ui.fact('ruocden', { button: t('listenOn') });
+  await ui.fact('ruocden', { button: label('listenOn') });
   ui.hint(t('tellerBridge'));
   // the staff flies up and becomes a bridge of moonlight
   const staff = dinh.staff, from = staff.getWorldPosition(new THREE.Vector3());
@@ -682,7 +712,7 @@ async function cuoiStop() {
   await lookAt(moonW.cuoiG.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.8, 0)), 1.6);
   await waitTap([moonW.cuoiHit], { hint: t('cuoiTap') });
   audio.play('chime');
-  await ui.fact('cuoi4', { button: t('greetCuoi') });
+  await ui.fact('cuoi4', { button: label('greetCuoi') });
 }
 
 // ---------- act 5: a leaf falls home ----------
@@ -743,12 +773,12 @@ function chooseStart() {
   const el = $('start');
   const draw = () => {
     el.innerHTML = `<div class="pane home"><p class="sub">${t('startTo', esc(story.to))}</p><h2>${esc(story.title)}</h2>
-      <button type="button" class="big primary" data-act="0">${t('btnBegin')}</button>
-      <button type="button" class="big" data-go="map">${t('btnChapters')}</button>
+      <button type="button" class="big primary" data-act="0">${label('btnBegin')}</button>
+      <button type="button" class="big" data-go="map">${label('btnChapters')}</button>
       <p class="langs">${Object.entries(LANGS).map(([k, name]) => `<button type="button" class="lang" data-lang="${k}"${k === lang ? ' aria-current="true"' : ''}>${esc(name)}</button>`).join('')}</p></div>
     <div class="pane map"><p class="sub">${t('btnChapters')}</p>
       <ol class="chain">${ACTS.map(([, , key], i) => `<li><button type="button" data-act="${i}"><span class="n">${t('chapterN', i + 1)}</span><b>${t(key)}</b><small>${t(key + 'What')}</small></button></li>`).join('')}</ol>
-      <button type="button" data-go="home">${t('btnBack')}</button></div>`;
+      <button type="button" data-go="home">${label('btnBack')}</button></div>`;
   };
   draw();
   el.hidden = false;
@@ -770,8 +800,8 @@ function chooseStart() {
 function applyChrome() {
   document.documentElement.lang = lang;
   headerEl.innerHTML = `<h1>${t('headerTitle')}</h1><p>${t('headerSub')}</p>`;
-  nextBtn.textContent = t('btnNext');
-  replayBtn.textContent = t('btnReplay');
+  nextBtn.innerHTML = label('btnNext');
+  replayBtn.innerHTML = label('btnReplay');
   canvas.setAttribute('aria-label', t('sceneLabel'));
   showMute();
 }
@@ -803,6 +833,7 @@ function tap(e) {
     if (hit) resolvePending({ hit });
     return;
   }
+  if (mode === 'walk' && street.group.visible) pick(e, nooks.filter((n) => n.on || n.busy).map((n) => n.hit))?.userData.gag(camera.position.clone());
 }
 canvas.addEventListener('pointerdown', (e) => {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -843,6 +874,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (mode === 'walk') rig.rotate(dx * 0.005, dy * 0.003); // walking is a swipe, see endPointer
   else rig.rotate(sgn * dx * 0.006, sgn * dy * 0.005);
 });
+const lookedAside = () => (WALK.aside = Math.abs(wrapAngle(rig.goal.yaw - WALK.cfg.heading(WALK.u))) > 0.5);
 function endPointer(e) {
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinch0 = 0;
@@ -862,10 +894,11 @@ function endPointer(e) {
   // a quick vertical flick walks (up: forward, down: back) and undoes the little turn it made; a slower drag only looks
   const sx = e.clientX - d.x, sy = e.clientY - d.y, h = canvas.clientHeight || 1;
   if (mode === 'walk' && d.mode === 'cam' && performance.now() - d.t < 350 && Math.abs(sy) > 30 && Math.abs(sy) > Math.abs(sx) * 1.5) {
-    rig.goal.yaw = d.yaw; rig.goal.pitch = d.pitch;
+    rig.goal.yaw = d.yaw; rig.goal.pitch = d.pitch; WALK.aside = false;
     WALK.uTarget -= Math.sign(sy) * THREE.MathUtils.clamp((Math.abs(sy) / h) * 0.2, 0.03, 0.1);
     return;
   }
+  if (mode === 'walk' && d.mode === 'cam') lookedAside();
   if (d.mode === 'scrub' && pending?.scrub) {
     if (d.k > 0.5) resolvePending({ hit: d.hit, k0: d.k });
     else { const sc = pending.scrub, k = d.k; animate(0.3, (t) => sc(lerp(k, 0, t))); }
@@ -876,15 +909,15 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   idle = 0;
-  if (mode === 'walk') WALK.uTarget -= e.deltaY * 0.0004; // scrolling up is deltaY < 0, and walks you forward
+  if (mode === 'walk') { WALK.uTarget -= e.deltaY * 0.0004; WALK.aside = false; } // scrolling up is deltaY < 0, and walks you forward
   else rig.zoom(1 + THREE.MathUtils.clamp(e.deltaY, -100, 100) * 0.0012);
 }, { passive: false });
 canvas.addEventListener('keydown', (e) => {
   const k = e.key;
-  if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); const first = rig.cur.dist < 0.2; rig.rotate((k === 'ArrowLeft' ? 1 : -1) * (first ? 0.15 : -0.15), 0); idle = 0; return; }
+  if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); const first = rig.cur.dist < 0.2; rig.rotate((k === 'ArrowLeft' ? 1 : -1) * (first ? 0.15 : -0.15), 0); idle = 0; if (mode === 'walk') lookedAside(); return; }
   if (k === 'ArrowUp' || k === 'ArrowDown') {
     e.preventDefault(); idle = 0;
-    if (mode === 'walk') WALK.uTarget += k === 'ArrowUp' ? 0.03 : -0.03;
+    if (mode === 'walk') { WALK.uTarget += k === 'ArrowUp' ? 0.03 : -0.03; WALK.aside = false; }
     else rig.rotate(0, k === 'ArrowUp' ? 0.1 : -0.1);
     return;
   }
@@ -892,7 +925,7 @@ canvas.addEventListener('keydown', (e) => {
   if (k !== 'Enter' && k !== ' ') return;
   e.preventDefault(); idle = 0;
   if (pending) resolvePending({ hit: pending.targets?.[0] || null });
-  else if (mode === 'walk') WALK.uTarget += 0.05;
+  else if (mode === 'walk') { WALK.uTarget += 0.05; WALK.aside = false; }
 });
 
 // ---------- layout / loop ----------
@@ -940,7 +973,7 @@ function frame() {
   key.target.position.copy(focus);
   sky.tick(t);
   tickLanterns(t, camera.position);
-  if (street.group.visible) { street.tick(t, dt, ambient, camera.position); for (const s of stops) s.tick(t, dt); }
+  if (street.group.visible) { street.tick(t, dt, ambient, camera.position); for (const s of stops) s.tick(t, dt); for (const n of nooks) n.tick(t, dt); nearNooks(); }
   if (dinh.group.visible) { dinh.tick(t, dt, ambient); dinh.lion.update(t, dt, ambient); }
   if (moonW.group.visible) moonW.tick(t, dt);
   if (roof.group.visible) {
@@ -982,4 +1015,4 @@ function reveal() {
 }
 renderer.setAnimationLoop(frame);
 run();
-window.__dbg = { renderer, composer, bloomPass, WALK, rig, stops, roof, keo, pomelo, dinh, moonW, resolvePending, get pending() { return pending; }, ui, camera, scene };
+window.__dbg = { renderer, composer, bloomPass, WALK, rig, stops, nooks, roof, keo, pomelo, dinh, moonW, resolvePending, get pending() { return pending; }, ui, camera, scene };

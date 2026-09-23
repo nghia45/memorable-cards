@@ -96,9 +96,10 @@ They crossfade between acts and load only after the viewer's first tap (browsers
 
 "Đêm Rằm": one Mid-Autumn night of a Hanoi childhood, in five acts (about 6–8 minutes). You walk at a
 child's eye height and stop at each stand to make or play with something. After each stop a **Góc tìm
-hiểu** card explains the custom in Vietnamese, with one line of English. Everything turns a full 360°:
+hiểu** card explains the custom in the language you chose (see Language). Everything turns a full 360°:
 drag to look around, scroll or pinch to zoom, and use the arrow keys. To walk, swipe up or scroll. If you
-stop for a few seconds, the walk carries on by itself.
+stop for a few seconds, the walk carries on by itself, unless you've turned to look off to the side: then it
+waits until you walk again.
 
 1. **Hàng Mã at dusk.** A street of tube houses with five stalls:
    - build a star lantern (đèn ông sao) stick by stick, then carry it for the rest of the night;
@@ -106,6 +107,17 @@ stop for a few seconds, the walk carries on by itself.
    - try on a paper mask (Ông Địa, Tôn Ngộ Không, Trư Bát Giới, Thỏ Ngọc);
    - press a mooncake in its wooden mould;
    - light the tin pop-pop boat and watch it chug.
+
+   Two jokes sit between the stalls. You tap them as you pass, and the walk doesn't stop for them. Inside a shop
+   just past the masks, a man in a wheelchair watches the final on an old CRT, with big star lanterns in green
+   tinsel rings tied behind him (the "Faker on the wheel" meme from the game *Tiệm Phở của anh Hai*). Tap him and
+   he spins round to sell you one: "Mua đèn không? tôi có 6 cái". He is
+   only there for those who look: his hint shows, and a tap on him works, once you turn toward his shop. Near the
+   end of the street is a trà đá stall on the pavement ("Một quán trà đá lề đường bình thường"). It works the
+   same way: turn to it and tap. An uncle presses the tobacco into the bowl of his điếu cày, flicks a lighter,
+   leans down into the tube while the ember flares and the water gurgles, then sits back, holds it, and lets a
+   long plume out into the lanterns. Meanwhile the young man beside him turns to you, wags a finger, then waves
+   you over to the tea glasses: "Trẻ con không được hút thuốc lào đâu. Uống trà đá đi, chú mời!"
 2. **The rooftop (sân thượng).** The family sits on a chiếu mat:
    - make the pomelo dog the real way: sour-pomelo segments pulled open into fluff, pinned with toothpicks
      onto a winter-melon and potato frame, longan-seed eyes;
@@ -163,13 +175,17 @@ for is really in the table, and that no fact card is a thin summary in one langu
 
 ## Music
 
-Drop two tracks into `t/trung-thu-2026/audio/`:
-- `alley.mp3`: festive and drum-led, for the street and the parade;
-- `moon.mp3`: quiet, for the rooftop and the moon.
+Each chapter has its own music. Drop a seamless loop per chapter into `t/trung-thu-2026/audio/`:
+- `street.mp3`: Hàng Mã, festive and busy;
+- `roof.mp3`: the rooftop with the family, quiet, under crickets;
+- `parade.mp3`: the lantern parade behind the lion, drum-led and fast;
+- `moon.mp3`: the moon, still and airy.
 
-Until then a generated placeholder plays: a four-bar pentatonic tune (điệu Bắc) over a moving bass root, with a trống
-lân pattern and a closing fill in the alley, and a breathy sáo voice over a drone on the moon. Effects are synthesized,
-among them the lion drum, the trống quân rope, knocks, the boat's putt-putt, the flame, chimes and crickets.
+They crossfade as the chapter changes. Until a file exists, a generated placeholder plays, all four on one four-bar
+pentatonic tune (điệu Bắc) over a moving bass root: plucked over a light trống lân pattern in the street, a đàn tranh
+rolling up each chord and bending into the notes on the rooftop, the lion dance's drum and chập chả driving it in the
+parade, and a breathy sáo over a drone on the moon. Effects are synthesized, among them the lion drum, the trống
+quân rope, knocks, the boat's putt-putt, the flame, chimes and crickets.
 
 The whole mix runs into a reverb built from a generated impulse and then a limiter, and effects are scattered across the
 stereo field so repeated pops and rustles don't stack up in the middle. The music is sent to the reverb more dryly than
@@ -185,6 +201,7 @@ the notes land in time, in range, and across the stereo field.
 | `js/rig.js` | Camera rig: orbit or first-person around a target, unbounded yaw, eased `fly()` shots |
 | `js/hangma.js` | Act 1 street: tube houses, shop interiors, strung lanterns, scooters, passers-by |
 | `js/stops.js` | The five hands-on stalls (star lantern, tò he, masks, mooncake mould, tin boat) |
+| `js/extras.js` | The street jokes: the man in the wheelchair watching TV, and the trà đá stall |
 | `js/roof.js` | Act 2 rooftop: terrace, neighbours, bulbs, mat and table, family, tray slots |
 | `js/pomelo.js` | The pomelo, peel petals, fluffed segments pinned onto the melon/potato frame, eyes, nose |
 | `js/keoquan.js` | The memory lantern: photo panels on the rotor, silhouettes with real candle shadows |

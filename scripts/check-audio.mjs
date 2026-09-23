@@ -58,7 +58,7 @@ globalThis.__gesture();                       // the first tap builds the graph
 assert.ok(nodes.some((n) => n.kind === 'conv'), 'no reverb in the chain');
 assert.ok(nodes.some((n) => n.kind === 'comp'), 'no limiter in the chain');
 
-// twenty seconds of the alley, then twenty of the moon
+// twenty seconds of each chapter's music
 const run = (label, secs) => {
   const before = notes.length;
   for (let i = 0; i < secs * 10; i++) { now += 0.1; tick(); }
@@ -67,9 +67,7 @@ const run = (label, secs) => {
   assert.ok(n > secs * 1.5, `${label} is too sparse: ${n} notes in ${secs}s`);
   return n;
 };
-run('alley', 20);
-audio.setMood('moon', true);
-run('moon ', 20);
+for (const m of ['street', 'roof', 'parade', 'moon']) { audio.setMood(m, m === 'roof'); run(m.padEnd(6), 20); }
 for (const name of ['chime', 'bell', 'drum', 'cymbal', 'paper', 'peel', 'pop', 'thung', 'knock', 'putt', 'flame', 'whoosh']) audio.play(name);
 
 const f = notes.map((n) => n.f).filter((v) => v > 0);

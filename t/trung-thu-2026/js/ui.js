@@ -1,7 +1,7 @@
 // Overlay UI: the hint line, the "Góc tìm hiểu" fact card, the memory card (photo + caption), the act title,
 // full-screen fades, and the mask the viewer puts on at the mask stall. Everything here is plain DOM.
 import { FACTS } from './facts.js';
-import { t, lang } from './lang.js';
+import { t, label, lang } from './lang.js';
 
 // Where a legend comes from: Vietnamese Trung Thu mixes its own tales with ones borrowed from China.
 const ORIGIN = { vn: 'originVn', cn: 'originCn' };
@@ -15,7 +15,7 @@ export function createUI() {
     hint(html) { hint.innerHTML = html || ''; },
     get cardOpen() { return !!closeCard; },
     // Show a fact card in the chosen language; resolves when the viewer taps the button (or presses Enter).
-    fact(id, { button = t('btnContinue'), extra = '' } = {}) {
+    fact(id, { button = label('btnContinue'), extra = '' } = {}) {
       const f = FACTS[id], en = lang === 'en', both = lang === 'both';
       const tag = en ? f.tagEn : f.tag;
       const head = en ? f.titleEn : f.title;
@@ -37,7 +37,7 @@ export function createUI() {
     // A memory from story.json: photo, date, caption. Resolves on close.
     memory(m, { index, total }) {
       const img = m.img ? `<img alt="" src="${esc(m.img.src)}">` : '';
-      mem.innerHTML = `<div class="paper">${img}<p class="date">${esc(m.date)}</p><p class="cap">${esc(m.caption)}</p><p class="count">${index + 1} / ${total}</p></div><button type="button">${esc(t('keoNext'))}</button>`;
+      mem.innerHTML = `<div class="paper">${img}<p class="date">${esc(m.date)}</p><p class="cap">${esc(m.caption)}</p><p class="count">${index + 1} / ${total}</p></div><button type="button">${label('keoNext')}</button>`;
       mem.classList.add('on');
       const btn = mem.querySelector('button');
       setTimeout(() => btn.focus({ preventScroll: true }), 50);
@@ -58,6 +58,7 @@ export function createUI() {
     // Mask overlay, seen from behind as the wearer does: the bare papier-mâché inside (mirrored) fills the screen
     // around the eye holes, and a hand mirror in the corner shows the painted face.
     mask(canvas, eyes) {
+      document.body.classList.toggle('masked', !!canvas);
       if (!canvas) { maskC.classList.remove('on'); return; }
       const face = canvas, S = face.width;
       canvas = Object.assign(document.createElement('canvas'), { width: S, height: S });

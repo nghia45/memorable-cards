@@ -22,6 +22,10 @@ export const STOPS = [
   { id: 'cake', z: -42, side: 1 },
   { id: 'boat', z: -54, side: -1 },
 ];
+// The jokes tapped in passing rather than stopped at (extras.js). The trà đá stall is on the pavement, so the
+// scooters keep off it; the man watching TV sits inside the first plain shop on the left past FAKER_Z.
+export const NOOKS = [{ id: 'tra', z: -61, side: 1 }];
+const FAKER_Z = -35.5;
 const SIGNS = [
   ['ĐÈN ÔNG SAO · ĐÈN KÉO QUÂN', 'Số 12 · Hàng Mã', '#b3141f', '#f7d56a'],
   ['TÒ HE · ĐỒ CHƠI DÂN GIAN', 'Số 31 · Hàng Mã', '#1d4e9e', '#ffffff'],
@@ -143,7 +147,7 @@ export function createHangMa(mats) {
   let signIdx = 5;
 
   // ---------- nhà ống: front on z = 0 facing +z (local), going back to -d ----------
-  function house(m, { w, floors, sign, shop, stall }) {
+  function house(m, { w, floors, sign, shop, stall, bare }) {
     const P = { plaster: [], trim: [], wood: [], tiles: [], shutter: [], dark: [], lit: [], shop: [], sign: [], cloth: [] };
     const g = 3.1, f = 2.75, top = g + f * (floors - 1), d = 7;
     // shell and ground floor: piers, sign band, open shopfront with its lit interior, rolled-up shutter
@@ -225,7 +229,7 @@ export function createHangMa(mats) {
       }
       b.dark.push(box(w - 0.3, 0.03, 0.03, 0, 2.62, 1.05).applyMatrix4(m));
     }
-    for (let x = -w / 2 + 0.6; x < w / 2 - 0.5; x += 0.45) for (const zz of [-0.7, -1.5]) { // stock hanging inside the shop
+    if (!bare) for (let x = -w / 2 + 0.6; x < w / 2 - 0.5; x += 0.45) for (const zz of [-0.7, -1.5]) { // stock hanging inside the shop
       if (rand() < 0.3) continue;
       const kind = shop === 0 || rand() < 0.5 ? 'star' : 'ball';
       items[kind].push({ p: new THREE.Vector3(x + (rand() - 0.5) * 0.1, 2.2, zz).applyMatrix4(m), c: pickColor(kind, rand()), s: 0.9 + rand() * 0.3, ry: rand() * 6, drop: 0.1 + rand() * 0.25 });
@@ -235,6 +239,7 @@ export function createHangMa(mats) {
   }
 
   // ---------- both sides of the street ----------
+  let faker = null;
   for (const side of [-1, 1]) {
     const r = new THREE.Matrix4().makeRotationY(side < 0 ? Math.PI / 2 : -Math.PI / 2);
     for (let z = Z0 + 6; z > Z1 + 3;) {
@@ -248,7 +253,9 @@ export function createHangMa(mats) {
       }
       const m = new THREE.Matrix4().makeTranslation(side * FACADE, 0, zc).multiply(r);
       const sign = stop ? signFor.get(stop.id) : (signIdx++ - 5) % (SIGNS.length - 5) + 5;
-      house(m, { w, floors: 3 + (rand() < 0.45 ? 1 : 0), sign, shop: stop ? shopFor.get(stop.id) : Math.floor(rand() * 4), stall: !!stop });
+      const bare = !faker && !stop && side < 0 && zc - w / 2 < FAKER_Z && w > 3.2; // his shop: nothing hanging over his lanterns
+      if (bare) faker = { x: -FACADE, z: zc, w };
+      house(m, { w, floors: 3 + (rand() < 0.45 ? 1 : 0), sign, shop: stop ? shopFor.get(stop.id) : Math.floor(rand() * 4), stall: !!stop, bare });
       z -= w + 0.02;
     }
   }
@@ -288,7 +295,7 @@ export function createHangMa(mats) {
 
   // scooters parked along the kerb, away from the stops
   for (const side of [-1, 1]) for (let z = Z0 - 1; z > Z1 + 6; z -= 1.1 + rand() * 2.5) {
-    if (STOPS.some((s) => s.side === side && Math.abs(s.z - z) < 3.5) || rand() < 0.35) continue;
+    if ([...STOPS, ...NOOKS, { side: -1, z: faker.z }].some((s) => s.side === side && Math.abs(s.z - z) < 3.5) || rand() < 0.35) continue; // and none in front of his shop
     const m = new THREE.Matrix4().makeRotationY(side * (Math.PI / 2 - 0.3) + (rand() - 0.5) * 0.2).setPosition(side * (ROAD + 0.55), 0.15, z);
     for (const p of scooter(rand)) b.bike.push(p.applyMatrix4(m));
   }
@@ -342,7 +349,7 @@ export function createHangMa(mats) {
     group.add(p.g);
   }
   const stoolMat = new THREE.MeshStandardMaterial({ color: 0xc8202a, roughness: 0.5 });
-  for (const [side, z] of [[1, -9.5], [-1, -23], [1, -35], [-1, -47], [1, -60]]) {
+  for (const [side, z] of [[1, -9.5], [-1, -23], [1, -35], [-1, -47], [-1, -63]]) {
     const p = makePerson({ elder: rand() < 0.5, girl: rand() < 0.5, top: [0xa87a5a, 0x4a6a8a, 0xd8c8a8][Math.floor(rand() * 3)], bottom: 0x2a2a30, hair: 'short', outfit: 'shirt' });
     p.sit(false);
     p.legs.forEach((l) => { l.hp.rotation.x = -1.25; l.kn.rotation.x = 1.9; });
@@ -364,7 +371,7 @@ export function createHangMa(mats) {
   const heading = (u) => { const t = path.getTangentAt(THREE.MathUtils.clamp(u, 0.001, 0.999)); return Math.atan2(-t.x, -t.z); };
 
   return {
-    group, path, heading, zToU, lights: b.lights,
+    group, path, heading, zToU, lights: b.lights, faker,
     tick(t, dt, ambient, cam) {
       for (const f of fields) f.userData.tick(t * ambient);
       for (const w of walkers) {

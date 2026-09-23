@@ -477,9 +477,9 @@ function cakeStop(audio) {
   const cake = new THREE.Mesh(cakeGeo, [side, cakeMat, side]);
   cake.castShadow = true;
   cake.visible = false;
-  const Y = TABLE_H + 0.02;
+  const Y = TABLE_H; // the tabletop
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 14), std(0xe8c890, { roughness: 0.6 }));
-  ball.position.set(-0.25, Y + 0.025, 0.12); ball.castShadow = true;
+  ball.position.set(-0.25, Y + 0.045, 0.12); ball.castShadow = true;
   // wooden mould: a block with a carved round cavity and a handle
   const mould = new THREE.Group();
   const block = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.2), std(0x8a5a2a, { roughness: 0.65 }));
@@ -502,11 +502,11 @@ function cakeStop(audio) {
   const baked = std(0xb8702a, { roughness: 0.35, bumpMap: bump, bumpScale: 6 }), sideB = std(0xa8621e, { roughness: 0.45 });
   const deo = std(0xf7f3ea, { roughness: 0.75, bumpMap: bump, bumpScale: 4 });
   const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.012, 24), std(0xb3141f, { roughness: 0.35 }));
-  tray.position.set(-0.36, Y - 0.01, -0.14); g.add(tray);
+  tray.position.set(-0.36, Y + 0.006, -0.14); g.add(tray);
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2, d = i < 3;
     const c = new THREE.Mesh(cakeGeo, d ? [sideB, baked, sideB] : [deo, deo, deo]);
-    c.position.set(-0.36 + Math.cos(a) * 0.11, Y + 0.02, -0.14 + Math.sin(a) * 0.11); c.castShadow = true; g.add(c);
+    c.position.set(-0.36 + Math.cos(a) * 0.11, Y + 0.032, -0.14 + Math.sin(a) * 0.11); c.castShadow = true; g.add(c);
   }
   const boxes = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.3), std(0xb3141f, { roughness: 0.4 }));
   boxes.position.set(0.1, Y + 0.05, -0.22); g.add(boxes);
@@ -515,6 +515,10 @@ function cakeStop(audio) {
   g.add(hit, mouldHit, stoveHit);
   const raw = new THREE.Color(0xe8c890), gold = new THREE.Color(0xb8702a);
   let knocks = 0;
+  // the knock: mould heights (its centre) at rest, lifted, and at the bottom of a knock, where the stuck cake meets the
+  // table; the two knocks land at these k, and the second one lets the cake go
+  const REST = Y + 0.03, HIGH = Y + 0.2, LOW = Y + 0.04, BOUNCE = 0.06, KNOCK = [0.3 + 0.45 * 0.25, 0.3 + 0.45 * 0.75];
+  const PARK = new THREE.Vector3(-0.22, REST, 0.2); // clear of the cake, the tray and the boxes, handle included
   const ballFrom = ball.position.clone(), cakeFrom = new THREE.Vector3(0, Y + 0.02, 0.08); // where the viewer let go
   function set(step, k) {
     if (step === 0) { // the ball rolls into the cavity and the palm presses it flat
@@ -524,22 +528,20 @@ function cakeStop(audio) {
       ball.scale.set(1 + p * 0.35, 1 - p * 0.55, 1 + p * 0.35);
       ball.position.y -= p * 0.02;
     }
-    if (step === 1) { // lift, flip, knock twice; the patterned cake falls out
-      const lift = Math.sin(cl(k, 0, 0.35) * Math.PI / 2), flip = ease(cl(k, 0.1, 0.4));
-      mould.position.y = Y + 0.03 + lift * 0.12;
-      mould.rotation.z = flip * Math.PI;
-      ball.visible = k < 0.35;
-      if (k >= 0.35 && !cake.visible) { cake.visible = true; }
-      const kn = cl(k, 0.4, 0.8), bump2 = Math.abs(Math.sin(kn * Math.PI * 2)) * (kn < 1 ? 1 : 0);
-      mould.position.y -= (1 - bump2) * 0.06 * (kn > 0 ? 1 : 0);
-      cake.position.set(0, Y + 0.02 + (1 - ease(cl(k, 0.35, 0.8))) * 0.08, 0.08);
-      const up = ease(cl(k, 0.8, 1));
-      mould.position.x = lerp(0, -0.05, up); mould.position.z = lerp(0.08, -0.12, up); mould.position.y += up * 0.02;
-      if (up > 0) mould.rotation.z = Math.PI * (1 + up);
+    if (step === 1) { // lift and flip it with the cake stuck inside, knock it twice on the table, set it down
+      const lift = ease(cl(k, 0, 0.3)), flip = ease(cl(k, 0.05, 0.3)), kn = cl(k, 0.3, 0.75), home = ease(cl(k, 0.75, 1));
+      let y = lerp(REST, HIGH, lift);
+      if (k > 0.3) y = LOW + (kn < 0.25 ? HIGH - LOW : BOUNCE) * Math.abs(Math.cos(kn * Math.PI * 2));
+      if (k > 0.75) y = lerp(LOW + BOUNCE, REST, home) + Math.sin(home * Math.PI) * 0.1;
+      mould.position.set(lerp(0, PARK.x, home), y, lerp(0.08, PARK.z, home));
+      mould.rotation.z = Math.PI * (flip - home); // back over the way it came, so the handle never swings down through the table
+      ball.visible = false; cake.visible = true; // the pressed dough is the cake now, pattern down in the cavity
+      if (k < KNOCK[1]) { if (cake.parent !== mould) mould.add(cake); cake.position.set(0, 0.02, 0); cake.rotation.set(0, 0, Math.PI); }
+      else { if (cake.parent !== g) g.attach(cake); cake.position.set(0, Y + 0.02, 0.08); cake.rotation.set(0, 0, 0); }
     }
     if (step === 2) { // onto the grill, turn golden, back to the front
       const go = ease(cl(k, 0, 0.25)), back = ease(cl(k, 0.8, 1));
-      cake.position.set(lerp(cakeFrom.x, 0.4, go) - back * 0.36, lerp(cakeFrom.y, Y + 0.15, go) - back * 0.13 + Math.sin(go * Math.PI) * 0.06, lerp(cakeFrom.z, 0.02, go) + back * 0.1);
+      cake.position.set(lerp(cakeFrom.x, 0.4, go) - back * 0.36, lerp(cakeFrom.y, Y + 0.185, go) - back * 0.165 + Math.sin(go * Math.PI) * 0.06, lerp(cakeFrom.z, 0.02, go) + back * 0.1);
       const b = cl(k, 0.25, 0.75);
       cakeMat.color.lerpColors(raw, gold, b); side.color.lerpColors(raw, gold, b * 0.9);
       cakeMat.roughness = lerp(0.55, 0.32, b);
@@ -558,13 +560,14 @@ function cakeStop(audio) {
         knocks = 0;
         if (s === 0) ballFrom.copy(ball.position);
         if (s === 2) cakeFrom.copy(cake.position);
-        if (s === 1) { const p0 = mould.position.clone(), h = new THREE.Vector3(0, Y + 0.03, 0.08); await ctx.play(0.25, (k) => mould.position.lerpVectors(p0, h, ease(k))); }
+        if (s === 1) { const p0 = mould.position.clone(), h = new THREE.Vector3(0, REST, 0.08); await ctx.play(0.25, (k) => mould.position.lerpVectors(p0, h, ease(k))); }
         await ctx.play(D[s] * (1 - k0), (k) => {
           const kk = lerp(k0, 1, k); set(s, kk);
           if (s === 0 && !knocks && kk > 0.6) { knocks = 1; audio.play('pop'); }
-          if (s === 1) { const n = Math.floor(cl(kk, 0.4, 0.8) * 2 + 0.5); while (knocks < Math.min(2, n)) { knocks++; audio.play('knock'); } }
+          if (s === 1) while (knocks < 2 && kk >= KNOCK[knocks]) { knocks++; audio.play('knock'); }
           if (s === 2 && !knocks && kk > 0.2) { knocks = 1; audio.play('flame'); }
         });
+        if (s === 0) mould.attach(ball); // the pressed dough rides along when you pick the mould up
       }
       audio.play('chime');
     },

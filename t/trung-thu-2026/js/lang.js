@@ -35,6 +35,15 @@ export function t(key, ...a) {
   const [viTop, viRest] = split(vi), [enTop, enRest] = split(en);
   return `${viTop}<br><small class="en">${enTop.replace(/^<span>[^<]*<\/span>/, '')}</small>${viRest}${sub(enRest)}`;
 }
+// A button's label. In "both" a pill can't take "Tiếp tục → · Continue →": the Vietnamese sits on top, the
+// English small under it, and the arrow, said once, stays outside the pair.
+export function label(key) {
+  if (lang !== 'both') return t(key);
+  const e = T[key], vi = val(e.vi, []), en = val(e.en, []);
+  if (vi === en) return vi;
+  const bare = (s) => s.replace(/\s*[←→]\s*/g, '');
+  return `${/^←/.test(vi) ? '← ' : ''}<span class="pair">${bare(vi)}<small class="en">${bare(en)}</small></span>${/→$/.test(vi) ? ' →' : ''}`;
+}
 // A line of a song: the Vietnamese always stands, and carries the English under it in the other two.
 export const verse = (vi, en) => (lang === 'vi' ? vi : `${vi}<br><small class="en">${en}</small>`);
 
@@ -67,8 +76,8 @@ const T = {
 
   // ---------- act titles ----------
   titleRoof: {
-    vi: '<p>Sân thượng nhà mình</p><h2>Rằm tháng Tám</h2>', en: '<p>Our own rooftop</p><h2>The fifteenth night</h2>',
-    both: '<p>Sân thượng nhà mình · Our own rooftop</p><h2>Rằm tháng Tám</h2><p class="en">The fifteenth night</p>',
+    vi: '<p>Sân thượng nhà mình</p><h2>Rằm tháng Tám</h2>', en: '<p>Our home rooftop</p><h2>The fifteenth night</h2>',
+    both: '<p>Sân thượng nhà mình · Our home rooftop</p><h2>Rằm tháng Tám</h2><p class="en">The fifteenth night</p>',
   },
   titleParade: {
     vi: '<p>Rước đèn</p><h2>Tết của thiếu nhi</h2>', en: '<p>The lantern parade</p><h2>The children’s festival</h2>',
@@ -143,6 +152,14 @@ const T = {
   },
   boat2: { vi: '<span>✋</span>Thả thuyền xuống nước<br><small>hoặc chạm vào thuyền</small>', en: '<span>✋</span>Drag the boat onto the water<br><small>or tap it</small>' },
   boatGo: { vi: '<small>Tạch tạch tạch… Nghe nó chạy kìa</small>', en: '<small>Tạch tạch tạch… listen to it go</small>', both: '<small>Tạch tạch tạch… Nghe nó chạy kìa<br><span class="en">listen to it go</span></small>' },
+
+  // ---------- act 1: the two pavement jokes (extras.js), tapped in passing ----------
+  fakerNear: { vi: '<span>✋</span>Có người đang xem ti vi trong tiệm. Chạm vào anh ấy<br><small>Hoặc cứ vuốt lên để đi tiếp</small>', en: '<span>✋</span>Someone’s watching TV in the shop. Tap him<br><small>Or just swipe up to keep walking</small>' },
+  fakerWho: { vi: 'Anh xem ti vi', en: 'The man watching TV' },
+  faker1: { vi: 'Mua đèn không? tôi có 6 cái', en: 'Want a lantern? I’ve got 6.' },
+  traNear: { vi: '<span>✋</span>Một quán trà đá lề đường bình thường<br><small>Hoặc cứ vuốt lên để đi tiếp</small>', en: '<span>✋</span>A casual roadside tea stall<br><small>Or just swipe up to keep walking</small>' },
+  traWho: { vi: 'Chú trà đá', en: 'A man at the tea stall' },
+  tra1: { vi: 'Trẻ con không được hút thuốc lào đâu. Uống trà đá đi, chú mời!', en: 'No thuốc lào for kids. Have an iced tea instead, it’s on me!' },
 
   // ---------- act 2: the rooftop ----------
   granDog: { vi: '<b>Bà:</b> “Cháu làm con chó bưởi cho bà nhé!”', en: '<b>Grandma:</b> “Make me a pomelo dog, won’t you?”' },

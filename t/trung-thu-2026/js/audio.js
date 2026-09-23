@@ -1,7 +1,8 @@
-// Sound: two music moods (alley: festive, drum-led; moon: quiet) plus effects synthesized in Web Audio.
-// Music: drop audio/alley.mp3 and audio/moon.mp3 next to index.html (seamless loops). Until a file exists, a
-// generated placeholder plays for that mood: a four-bar pentatonic tune over a moving bass root, with a
-// trống lân pattern in the alley and a sáo-like sustained voice on the moon.
+// Sound: a music mood per chapter plus effects synthesized in Web Audio.
+// Music: drop audio/street.mp3, roof.mp3, parade.mp3 and moon.mp3 next to index.html (seamless loops). Until a
+// file exists, a generated placeholder plays for that chapter, all on one four-bar pentatonic tune over a moving
+// bass root: plucked with a light trống in the street, a đàn tranh rolling over it on the rooftop, the lion
+// dance's drum and chập chả driving it in the parade, and a sáo over a drone on the moon.
 // The whole mix runs through a reverb (a generated impulse: the walls of the alley) into a limiter, and
 // effects are scattered across the stereo field so the stalls aren't all in the middle of your head.
 // Browsers only allow sound after a gesture, so nothing starts until the first tap / key press.
@@ -23,11 +24,24 @@ const DRUMS = [                          // tùng · tùng cắc tùng · cắc 
   [1, 0, 1, 0.5, 1, 0, 0.5, 0],
   [1, 0.5, 1, 0.5, 1, 0.5, 1, 0.5],      // the fill that closes the cycle
 ];
+const LION = [                           // múa lân: the drum runs, the rim answers, the roll closes it
+  [1, 0, 1, 0.5, 1, 0.5, 1, 0],
+  [1, 0, 1, 0.5, 1, 0, 1, 0.5],
+  [1, 0, 1, 0.5, 1, 0.5, 1, 0],
+  [1, 1, 1, 0.5, 1, 1, 1, 1],
+];
+// per chapter: seconds per step (eight steps a bar), the voice that carries the tune, and the drums under it
+const MOODS = {
+  street: { step: 0.3, voice: 'pluck', drums: DRUMS, drum: 0.2 },
+  roof: { step: 0.45, voice: 'tranh' },
+  parade: { step: 0.21, voice: 'pluck', drums: LION, drum: 0.26, clash: true },
+  moon: { step: 0.62, voice: 'flute' },
+};
 // how wide each effect scatters: the small handmade sounds spread, the drums and the bell stay in front
 const SPREAD = { paper: 0.55, pop: 0.5, putt: 0.65, knock: 0.4, chime: 0.3, cymbal: 0.35, peel: 0.3, flame: 0.25 };
 
 export function createAudio() {
-  let ctx = null, master, rev, fx, buses = {}, noise, mood = 'alley', crickets, cricketsOn = false, muted = false, hidden = false;
+  let ctx = null, master, rev, fx, buses = {}, noise, mood = 'street', crickets, cricketsOn = false, muted = false, hidden = false;
   try { muted = localStorage.getItem('keepsake-muted') === '1'; } catch {}
 
   function start() {
@@ -48,7 +62,7 @@ export function createAudio() {
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    for (const m of ['alley', 'moon']) {
+    for (const m of Object.keys(MOODS)) {
       const g = ctx.createGain();
       g.gain.value = m === mood ? 0.5 : 0;
       g.connect(master); sendRev(g, WET_MUSIC);
@@ -106,27 +120,41 @@ export function createAudio() {
     }
     const bus = buses[mood];
     if (bus.file) return;
-    const alley = mood === 'alley', step = alley ? 0.3 : 0.62;
+    const md = MOODS[mood];
     if (nextBar < now) nextBar = now + 0.1;
-    while (nextBar < now + 0.5) { playBar(nextBar, step, bar++, bus.gain, alley); nextBar += step * 8; }
+    while (nextBar < now + 0.5) { playBar(nextBar, md, bar++, bus.gain); nextBar += md.step * 8; }
   }
   // the melody wanders by step, mostly, and comes to rest on a note of the bar's chord
   const spot = (d) => Math.max(-0.55, Math.min(0.55, (d - 3) * 0.13)); // higher notes sit further right
-  function playBar(t0, step, b, out, alley) {
-    const m = MOTIF[PHRASE[b % 4]], root = ROOTS[b % 4];
-    pluck(hz(root - 12), t0, out, alley ? 0.16 : 0.12, false, alley ? 2.6 : 4.5);
-    if (alley) pluck(hz(root - 5), t0 + step * 4, out, 0.09, false, 2.2);
-    else if (b % 4 === 0) flute(hz(root - 12), t0, step * 8, 0.04, out, 0); // a drone under the quiet bars
+  function playBar(t0, { step, voice, drums, drum: dv, clash: cl }, b, out) {
+    const m = MOTIF[PHRASE[b % 4]], root = ROOTS[b % 4], land = LAND[b % 4];
+    if (voice === 'flute') { pluck(hz(root - 12), t0, out, 0.12, false, 4.5); if (b % 4 === 0) flute(hz(root - 12), t0, step * 8, 0.04, out, 0); } // a drone under the quiet bars
+    else if (voice === 'tranh') { // the zither rolls up from the bar's chord note and lets it ring
+      pluck(hz(root - 12), t0, out, 0.1, false, 4);
+      [0, 1, 2, 3].forEach((k, i) => pluck(hz(deg(land + k)), t0 + i * step * 0.35, out, 0.05, false, 3, spot(land + k)));
+    } else {
+      pluck(hz(root - 12), t0, out, 0.16, false, 2.6);
+      pluck(hz(root - 5), t0 + step * 4, out, 0.09, false, 2.2);
+    }
     m.forEach((s, i) => {
-      if (i === m.length - 1) mDeg = LAND[b % 4] + (mDeg > 4 ? 5 : 0);
+      if (i === m.length - 1) mDeg = land + (mDeg > 4 ? 5 : 0);
       else mDeg += (mDeg > 5 ? -1 : mDeg < 1 ? 1 : Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.25 ? 2 : 1);
       const t = t0 + s * step;
-      if (alley) pluck(hz(deg(mDeg)), t, out, 0.11, Math.random() < 0.2, 1.8, spot(mDeg));
-      else if (i % 2 === 0) flute(hz(deg(mDeg)), t, step * 2.2, 0.07, out, spot(mDeg));
+      if (voice === 'flute') { if (i % 2 === 0) flute(hz(deg(mDeg)), t, step * 2.2, 0.07, out, spot(mDeg)); }
+      else if (voice === 'tranh') { if (s >= 2) pluck(hz(deg(mDeg + 5)), t, out, 0.07, Math.random() < 0.5, 2.6, spot(mDeg)); } // high, and it bends into the note
+      else pluck(hz(deg(mDeg)), t, out, 0.11, Math.random() < 0.2, 1.8, spot(mDeg));
     });
-    if (!alley) return;
-    const pat = DRUMS[b % 4];
-    for (let i = 0; i < 8; i++) if (pat[i]) drum(t0 + i * step, pat[i] === 1 ? 0.2 : 0.09, pat[i] !== 1, out);
+    if (!drums) return;
+    const pat = drums[b % 4];
+    for (let i = 0; i < 8; i++) if (pat[i]) drum(t0 + i * step, pat[i] === 1 ? dv : dv * 0.45, pat[i] !== 1, out);
+    if (cl) for (const i of [0, 4]) clash(t0 + i * step, i ? 0.05 : 0.08, out);
+  }
+  // chập chả under the lion: the cymbal's wash without its ring, so it keeps out of the tune's way
+  function clash(t, vol, out) {
+    const hp = ctx.createBiquadFilter(), g = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 5000;
+    env(g, t, 0.003, vol, 0.45);
+    noiseSrc(t, 0.5).connect(hp).connect(g).connect(out);
   }
   function pluck(f, t, out, vol, bend, len = 1.8, p = 0) {
     const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
@@ -264,6 +292,29 @@ export function createAudio() {
       bp.frequency.setValueAtTime(600, t); bp.frequency.exponentialRampToValueAtTime(1600, t + 0.2);
       env(g, t, 0.02, 0.25, 0.4); noiseSrc(t, 0.45).connect(bp).connect(g).connect(fx);
     },
+    gurgle(t) { // the điếu cày: water bubbling up the pipe while he draws on it, then the air through the tobacco
+      for (let i = 0; i < 28; i++) {
+        const tt = t + i * 0.06 + Math.random() * 0.025, o = ctx.createOscillator(), g = ctx.createGain(), f = 120 + Math.random() * 180;
+        o.frequency.setValueAtTime(f, tt); o.frequency.exponentialRampToValueAtTime(f * 1.9, tt + 0.045);
+        env(g, tt, 0.004, 0.14 * Math.min(1, (i + 1) / 6), 0.06);
+        o.connect(g).connect(fx); o.start(tt); o.stop(tt + 0.07);
+      }
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.Q.value = 1.5; bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(1300, t + 1.7);
+      env(g, t, 0.3, 0.06, 1.8); noiseSrc(t, 1.9).connect(bp).connect(g).connect(fx);
+    },
+    exhale(t) { // a long, satisfied breath out
+      const lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(1500, t); lp.frequency.exponentialRampToValueAtTime(300, t + 1.4);
+      env(g, t, 0.06, 0.3, 1.5); noiseSrc(t, 1.6).connect(lp).connect(g).connect(fx);
+    },
+    squeak(t) { // wheelchair tyres turning on the tiles
+      for (const [d, f] of [[0, 1900], [0.22, 2300]]) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(f, t + d); o.frequency.linearRampToValueAtTime(f * 1.15, t + d + 0.08);
+        env(g, t + d, 0.01, 0.025, 0.1); o.connect(g).connect(fx); o.start(t + d); o.stop(t + d + 0.12);
+      }
+    },
     whoosh(t) {
       const bp = ctx.createBiquadFilter(), g = ctx.createGain();
       bp.type = 'bandpass'; bp.Q.value = 1.2;
@@ -296,7 +347,7 @@ export function createAudio() {
       fx.connect(master); sendRev(fx, WET_FX);
       FX[name](ctx.currentTime + 0.01, v);
     },
-    // mood: 'alley' | 'moon'; crickets adds the courtyard's night insects
+    // mood: 'street' | 'roof' | 'parade' | 'moon'; crickets adds the night insects
     setMood(m, withCrickets = false) {
       mood = m; cricketsOn = withCrickets;
       if (!ctx) return;
