@@ -42,7 +42,8 @@ export function createSky() {
         vec3 cell = floor(d * 240.0);
         float st = step(0.9962 - space * 0.004, hash(cell)) * smoothstep(0.05 - space * 0.3, 0.35 - space * 0.3, h) * (1.0 - pow(md, 12.0)) * (1.0 - dusk * 0.7);
         st *= 0.55 + 0.45 * sin(time * 2.0 + hash(cell + 1.0) * 40.0);
-        vec2 cp = d.xz / (d.y + 0.12) * 0.8 + vec2(time * 0.008, time * 0.003);
+        // kept off zero: at d.y = -0.12 (in view on the moon) it gave NaN, which the bloom spread into black blocks
+        vec2 cp = d.xz / max(d.y + 0.12, 0.02) * 0.8 + vec2(time * 0.008, time * 0.003);
         float c = smoothstep(0.5, 0.8, fbm(cp * 1.2)) * smoothstep(0.02, 0.15, h) * (1.0 - space);
         float thin = fbm(cp * 4.0 + 3.0);
         vec3 cloud = vec3(0.05, 0.055, 0.09) + vec3(0.55, 0.55, 0.62) * pow(md, 10.0) * bright + hor * 0.5 * (1.0 - smoothstep(0.0, 0.3, h));
