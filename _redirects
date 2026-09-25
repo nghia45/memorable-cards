@@ -1,0 +1,3 @@
+# The landing page isn't published while only the Trung Thu card is open (see .assetsignore): send it there
+/            /t/trung-thu-2026/  302
+/index.html  /t/trung-thu-2026/  302

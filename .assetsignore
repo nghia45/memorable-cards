@@ -1,0 +1,8 @@
+# Only the Trung Thu card is published for now. Everything else is left out of the Cloudflare upload, so
+# every other route answers 404. To publish another card again, add a line like `!/t/<id>/` under `/t/*`
+# (and `!/index.html` etc. for the landing page, with its line removed from _redirects).
+/*
+!/t/
+/t/*
+!/t/trung-thu-2026/
+!/_redirects
